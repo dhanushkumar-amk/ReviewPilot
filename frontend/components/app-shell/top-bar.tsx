@@ -21,20 +21,33 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 import {
   UserIcon,
   SettingsIcon,
   LogOutIcon,
   ChevronDownIcon,
+  PlusIcon,
+  HelpCircleIcon,
+  BellIcon,
 } from "lucide-react";
 
 const routeNames: Record<string, string> = {
-  "/dashboard": "Findings",
+  "/dashboard": "Overview",
+  "/findings": "Findings",
   "/repositories": "Repositories",
   "/scans": "Scans",
-  "/findings": "Findings",
+  "/rules": "Rules",
   "/pull-requests": "Pull requests",
   "/settings": "Settings",
+  "/billing": "Billing",
+  "/docs": "Documentation",
+  "/support": "Support",
 };
 
 export function TopBar() {
@@ -65,8 +78,60 @@ export function TopBar() {
         </Breadcrumb>
       </div>
 
-      {/* User profile dropdown menu */}
+      {/* Right side controls: Add repository, Help, Notifications, User menu */}
       <div className="flex items-center gap-2">
+        {/* Secondary outline "Add repository" button */}
+        <Button
+          variant="outline"
+          size="sm"
+          render={<Link href="/repositories" />}
+          nativeButton={false}
+          className="hidden sm:inline-flex"
+        >
+          <PlusIcon data-icon="inline-start" />
+          <span>Add repository</span>
+        </Button>
+
+        {/* Help icon button linking to /docs */}
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon"
+                render={<Link href="/docs" />}
+                nativeButton={false}
+                aria-label="Documentation and help"
+              />
+            }
+          >
+            <HelpCircleIcon />
+          </TooltipTrigger>
+          <TooltipContent>Documentation & help</TooltipContent>
+        </Tooltip>
+
+        {/* Notification bell with static unread dot */}
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Notifications (1 unread)"
+                className="relative"
+              />
+            }
+          >
+            <BellIcon />
+            <span
+              className="absolute top-2 right-2 size-2 rounded-full bg-destructive"
+              aria-hidden="true"
+            />
+          </TooltipTrigger>
+          <TooltipContent>Notifications</TooltipContent>
+        </Tooltip>
+
+        {/* User profile dropdown menu */}
         <DropdownMenu>
           <DropdownMenuTrigger
             className="flex items-center gap-2 rounded-full border border-border bg-card p-1 pr-2.5 text-left text-xs font-medium hover:bg-muted transition-colors outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
@@ -82,11 +147,17 @@ export function TopBar() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuGroup>
-              <DropdownMenuItem className="cursor-pointer">
+              <DropdownMenuItem
+                render={<Link href="/settings" />}
+                className="cursor-pointer"
+              >
                 <UserIcon data-icon="inline-start" />
                 <span>Profile</span>
               </DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer">
+              <DropdownMenuItem
+                render={<Link href="/settings" />}
+                className="cursor-pointer"
+              >
                 <SettingsIcon data-icon="inline-start" />
                 <span>Settings</span>
               </DropdownMenuItem>
@@ -104,4 +175,3 @@ export function TopBar() {
     </header>
   );
 }
-

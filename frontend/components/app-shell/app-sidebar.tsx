@@ -25,6 +25,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { CommandPalette } from "./command-palette";
 import { cn } from "cn";
 import {
@@ -34,12 +35,20 @@ import {
   ShieldAlertIcon,
   GitPullRequestIcon,
   SettingsIcon,
+  CreditCardIcon,
   ChevronsUpDownIcon,
   SearchIcon,
   CheckIcon,
 } from "lucide-react";
 
-const navItems = [
+interface NavItem {
+  title: string;
+  href: string;
+  icon: React.ComponentType;
+  badge?: string;
+}
+
+const platformItems: NavItem[] = [
   {
     title: "Dashboard",
     href: "/dashboard",
@@ -64,11 +73,20 @@ const navItems = [
     title: "Pull requests",
     href: "/pull-requests",
     icon: GitPullRequestIcon,
+    badge: "New",
   },
+];
+
+const accountItems: NavItem[] = [
   {
     title: "Settings",
     href: "/settings",
     icon: SettingsIcon,
+  },
+  {
+    title: "Billing",
+    href: "/billing",
+    icon: CreditCardIcon,
   },
 ];
 
@@ -126,11 +144,11 @@ export function AppSidebar() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Search Trigger */}
+          {/* Search Command Palette Trigger */}
           <button
             type="button"
             onClick={() => setCommandOpen(true)}
-            className="flex w-full items-center justify-between rounded-lg border border-sidebar-border bg-card px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 group-data-[collapsible=icon]:p-1.5 group-data-[collapsible=icon]:justify-center"
+            className="flex w-full items-center justify-between rounded-lg border border-sidebar-border bg-card px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 group-data-[collapsible=icon]:p-1.5 group-data-[collapsible=icon]:justify-center cursor-pointer"
             aria-label="Open search command palette"
           >
             <div className="flex items-center gap-2">
@@ -144,14 +162,15 @@ export function AppSidebar() {
         </SidebarHeader>
 
         {/* Grouped Nav Items */}
-        <SidebarContent className="p-2">
-          <SidebarGroup>
+        <SidebarContent className="p-2 gap-4">
+          {/* Platform Group */}
+          <SidebarGroup className="p-0">
             <SidebarGroupLabel className="text-xs font-medium text-muted-foreground px-2">
               Platform
             </SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu aria-label="Main navigation">
-                {navItems.map((item) => {
+              <SidebarMenu aria-label="Platform navigation">
+                {platformItems.map((item) => {
                   const isActive = pathname === item.href;
                   const Icon = item.icon;
 
@@ -163,7 +182,7 @@ export function AppSidebar() {
                         aria-current={isActive ? "page" : undefined}
                         tooltip={item.title}
                         className={cn(
-                          "relative transition-colors",
+                          "relative transition-colors flex items-center justify-between",
                           isActive
                             ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground pl-3.5"
                             : "text-sidebar-foreground hover:bg-sidebar-accent"
@@ -177,10 +196,67 @@ export function AppSidebar() {
                             aria-hidden="true"
                           />
                         )}
-                        <Icon className="size-4 shrink-0" />
-                        <span className="group-data-[collapsible=icon]:hidden truncate">
-                          {item.title}
-                        </span>
+                        <div className="flex items-center gap-2 truncate">
+                          <Icon />
+                          <span className="group-data-[collapsible=icon]:hidden truncate">
+                            {item.title}
+                          </span>
+                        </div>
+                        {item.badge && (
+                          <Badge
+                            variant="secondary"
+                            className="ml-auto text-[10px] px-1.5 py-0 group-data-[collapsible=icon]:hidden"
+                          >
+                            {item.badge}
+                          </Badge>
+                        )}
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+
+          {/* Account Group */}
+          <SidebarGroup className="p-0">
+            <SidebarGroupLabel className="text-xs font-medium text-muted-foreground px-2">
+              Account
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu aria-label="Account navigation">
+                {accountItems.map((item) => {
+                  const isActive = pathname === item.href;
+                  const Icon = item.icon;
+
+                  return (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton
+                        render={<Link href={item.href} />}
+                        isActive={isActive}
+                        aria-current={isActive ? "page" : undefined}
+                        tooltip={item.title}
+                        className={cn(
+                          "relative transition-colors flex items-center justify-between",
+                          isActive
+                            ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground pl-3.5"
+                            : "text-sidebar-foreground hover:bg-sidebar-accent"
+                        )}
+                      >
+                        {/* 3px orange active marker */}
+                        {isActive && (
+                          <span
+                            className="absolute left-0 inset-y-1 rounded-r-full bg-primary"
+                            style={{ width: "3px" }}
+                            aria-hidden="true"
+                          />
+                        )}
+                        <div className="flex items-center gap-2 truncate">
+                          <Icon />
+                          <span className="group-data-[collapsible=icon]:hidden truncate">
+                            {item.title}
+                          </span>
+                        </div>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   );
@@ -190,8 +266,27 @@ export function AppSidebar() {
           </SidebarGroup>
         </SidebarContent>
 
-        {/* Footer with Avatar, User Info, and Collapse Trigger */}
-        <SidebarFooter className="border-t border-sidebar-border p-2">
+        {/* Footer with Docs/Support links, Avatar, User Info, and Collapse Trigger */}
+        <SidebarFooter className="border-t border-sidebar-border p-2 flex flex-col gap-2">
+          {/* Docs and Support muted links above user block */}
+          <div className="flex items-center gap-3 px-2 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
+            <Link
+              href="/docs"
+              className="hover:text-foreground transition-colors underline-offset-2 hover:underline"
+            >
+              Docs
+            </Link>
+            <span className="text-border" aria-hidden="true">
+              •
+            </span>
+            <Link
+              href="/support"
+              className="hover:text-foreground transition-colors underline-offset-2 hover:underline"
+            >
+              Support
+            </Link>
+          </div>
+
           <div className="flex items-center justify-between gap-2 group-data-[collapsible=icon]:justify-center">
             <div className="flex items-center gap-2.5 min-w-0 group-data-[collapsible=icon]:hidden">
               <Avatar className="size-8 shrink-0">
