@@ -20,10 +20,11 @@ export default function AppLayout({
       <AppSidebar />
       <SidebarInset className="flex flex-1 flex-col min-w-0 bg-background">
         <TopBar />
-        <main className="flex-1 p-8">
+        <div className="flex-1 p-8">
           <div className="mx-auto w-full max-w-6xl">{children}</div>
-        </main>
+        </div>
       </SidebarInset>
     </SidebarProvider>
   );
 }
+

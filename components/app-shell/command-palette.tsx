@@ -91,3 +91,4 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     </CommandDialog>
   );
 }
+

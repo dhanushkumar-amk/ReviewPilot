@@ -15,6 +15,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarTrigger,
+  SidebarRail,
 } from "@/components/ui/sidebar";
 import {
   DropdownMenu,
@@ -25,7 +26,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { CommandPalette } from "./command-palette";
-import { cn } from "cn";
 import {
   LayoutDashboardIcon,
   FolderGit2Icon,
@@ -80,17 +80,17 @@ export function AppSidebar() {
     <>
       <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar">
         {/* Workspace Switcher Header */}
-        <SidebarHeader className="border-b border-sidebar-border p-3 flex flex-col gap-3">
+        <SidebarHeader className="border-b border-sidebar-border p-2.5 flex flex-col gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger
-              className="flex w-full items-center justify-between gap-2 rounded-lg border border-sidebar-border bg-card p-2 text-left text-sm font-medium hover:bg-sidebar-accent transition-colors outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
+              className="flex w-full items-center justify-between gap-2 rounded-lg border border-sidebar-border bg-card p-1.5 text-left text-sm font-medium hover:bg-sidebar-accent transition-colors outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 group-data-[collapsible=icon]:p-1 group-data-[collapsible=icon]:justify-center"
               aria-label="Switch workspace"
             >
               <div className="flex items-center gap-2 truncate">
                 <div className="size-6 shrink-0 rounded-md bg-foreground text-background flex items-center justify-center text-xs font-semibold">
                   RP
                 </div>
-                <div className="flex flex-col truncate leading-tight">
+                <div className="flex flex-col truncate leading-tight group-data-[collapsible=icon]:hidden">
                   <span className="text-xs font-semibold text-sidebar-foreground truncate">
                     {workspace}
                   </span>
@@ -99,26 +99,26 @@ export function AppSidebar() {
                   </span>
                 </div>
               </div>
-              <ChevronsUpDownIcon className="size-4 shrink-0 text-muted-foreground" />
+              <ChevronsUpDownIcon className="size-4 shrink-0 text-muted-foreground group-data-[collapsible=icon]:hidden" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-52">
               <DropdownMenuGroup>
                 <DropdownMenuItem
                   onClick={() => setWorkspace("ReviewPilot Production")}
-                  className="flex items-center justify-between"
+                  className="flex items-center justify-between cursor-pointer"
                 >
                   <span>ReviewPilot Production</span>
                   {workspace === "ReviewPilot Production" && (
-                    <CheckIcon className="size-3.5" />
+                    <CheckIcon data-icon="inline-end" />
                   )}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => setWorkspace("ReviewPilot Staging")}
-                  className="flex items-center justify-between"
+                  className="flex items-center justify-between cursor-pointer"
                 >
                   <span>ReviewPilot Staging</span>
                   {workspace === "ReviewPilot Staging" && (
-                    <CheckIcon className="size-3.5" />
+                    <CheckIcon data-icon="inline-end" />
                   )}
                 </DropdownMenuItem>
               </DropdownMenuGroup>
@@ -129,14 +129,14 @@ export function AppSidebar() {
           <button
             type="button"
             onClick={() => setCommandOpen(true)}
-            className="flex w-full items-center justify-between rounded-lg border border-sidebar-border bg-card px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
+            className="flex w-full items-center justify-between rounded-lg border border-sidebar-border bg-card px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 group-data-[collapsible=icon]:p-1.5 group-data-[collapsible=icon]:justify-center"
             aria-label="Open search command palette"
           >
             <div className="flex items-center gap-2">
-              <SearchIcon className="size-3.5" />
-              <span>Search views...</span>
+              <SearchIcon className="size-4 shrink-0" />
+              <span className="group-data-[collapsible=icon]:hidden">Search views...</span>
             </div>
-            <kbd className="pointer-events-none inline-flex h-4 items-center rounded border border-border bg-muted px-1 font-mono text-[10px] text-muted-foreground">
+            <kbd className="pointer-events-none inline-flex h-4 items-center rounded border border-border bg-muted px-1 font-mono text-[10px] text-muted-foreground group-data-[collapsible=icon]:hidden">
               ⌘K
             </kbd>
           </button>
@@ -160,12 +160,8 @@ export function AppSidebar() {
                         render={<Link href={item.href} />}
                         isActive={isActive}
                         aria-current={isActive ? "page" : undefined}
-                        className={cn(
-                          "relative flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-colors",
-                          isActive
-                            ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                            : "text-sidebar-foreground hover:bg-sidebar-accent"
-                        )}
+                        tooltip={item.title}
+                        className="relative"
                       >
                         {/* 3px orange active marker */}
                         {isActive && (
@@ -175,8 +171,10 @@ export function AppSidebar() {
                             aria-hidden="true"
                           />
                         )}
-                        <Icon className="size-4 shrink-0 text-sidebar-foreground" />
-                        <span>{item.title}</span>
+                        <Icon />
+                        <span className="group-data-[collapsible=icon]:hidden truncate">
+                          {item.title}
+                        </span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   );
@@ -187,9 +185,9 @@ export function AppSidebar() {
         </SidebarContent>
 
         {/* Footer with Avatar, User Info, and Collapse Trigger */}
-        <SidebarFooter className="border-t border-sidebar-border p-3">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2.5 min-w-0">
+        <SidebarFooter className="border-t border-sidebar-border p-2">
+          <div className="flex items-center justify-between gap-2 group-data-[collapsible=icon]:justify-center">
+            <div className="flex items-center gap-2.5 min-w-0 group-data-[collapsible=icon]:hidden">
               <Avatar className="size-8 shrink-0">
                 <AvatarFallback>AR</AvatarFallback>
               </Avatar>
@@ -202,9 +200,11 @@ export function AppSidebar() {
                 </span>
               </div>
             </div>
-            <SidebarTrigger aria-label="Collapse or expand sidebar" />
+            <SidebarTrigger aria-label="Toggle sidebar collapse" />
           </div>
         </SidebarFooter>
+
+        <SidebarRail />
       </Sidebar>
 
       <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />

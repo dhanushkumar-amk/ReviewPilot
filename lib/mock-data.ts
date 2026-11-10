@@ -76,3 +76,4 @@ export const mockFindings: Finding[] = [
     ruleId: "TS-501",
   },
 ];
+

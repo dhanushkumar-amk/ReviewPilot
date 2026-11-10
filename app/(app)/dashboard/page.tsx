@@ -219,7 +219,8 @@ function DashboardContent() {
                 <TableRow className="h-11 bg-muted/50 border-b border-border hover:bg-muted/50">
                   <TableHead className="w-12 px-4">
                     <Checkbox
-                      checked={allSelected ? true : isPartiallySelected ? "indeterminate" : false}
+                      checked={allSelected}
+                      indeterminate={isPartiallySelected}
                       onCheckedChange={handleSelectAll}
                       aria-label="Select all findings"
                     />
