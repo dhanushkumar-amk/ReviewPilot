@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.next/
+
+# Env files (never commit real secrets)
+.env
+.env.*
+!.env.example
+!.env.local.example
+!.env.*.example
