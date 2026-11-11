@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "./db.js";
-import { env } from "./env.js";
+import { env, isGithubAuthEnabled, isGoogleAuthEnabled } from "./env.js";
 
 // TODO: Integrate a real transactional email provider (e.g., Resend or Postmark) before production.
 const hasConfiguredEmailProvider = false;
@@ -53,6 +53,44 @@ export const auth = betterAuth({
       assertEmailProviderConfigured();
       if (env.NODE_ENV === "development") {
         console.info(`\n[Auth Dev] Email verification link for ${user.email}: ${url}\n`);
+      }
+    },
+  },
+  socialProviders: {
+    ...(isGoogleAuthEnabled
+      ? {
+          google: {
+            clientId: env.GOOGLE_CLIENT_ID!,
+            clientSecret: env.GOOGLE_CLIENT_SECRET!,
+            scope: ["openid", "email", "profile"],
+          },
+        }
+      : {}),
+    ...(isGithubAuthEnabled
+      ? {
+          github: {
+            clientId: env.GITHUB_CLIENT_ID!,
+            clientSecret: env.GITHUB_CLIENT_SECRET!,
+            scope: ["read:user", "user:email"],
+          },
+        }
+      : {}),
+  },
+  account: {
+    encryptOAuthTokens: true,
+    accountLinking: {
+      enabled: true,
+      trustedProviders: ["google", "github"],
+      allowDifferentEmails: false,
+    },
+  },
+  user: {
+    validateUserInfo: ({ user, source }) => {
+      if (source.method === "oauth" && user.emailVerified !== true) {
+        return {
+          error: "email_not_verified",
+          errorDescription: "Your provider account must have a verified email address.",
+        };
       }
     },
   },

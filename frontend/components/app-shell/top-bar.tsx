@@ -21,7 +21,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
   Popover,
@@ -294,6 +294,11 @@ export function TopBar() {
             aria-label="Open user profile menu"
           >
             <Avatar className="size-6 shrink-0">
+              <AvatarImage
+                src={currentUser?.image ?? undefined}
+                alt={displayName}
+                referrerPolicy="no-referrer"
+              />
               <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
             <span className="hidden sm:inline font-medium text-foreground">

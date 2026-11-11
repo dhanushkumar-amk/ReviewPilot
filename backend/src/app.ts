@@ -14,6 +14,29 @@ import { meRoutes } from "./routes/me.js";
 
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9._-]{1,128}$/;
 
+function sanitizeRequestUrl(rawUrl: string): string {
+  const queryIndex = rawUrl.indexOf("?");
+  if (queryIndex === -1) {
+    return rawUrl;
+  }
+
+  const pathname = rawUrl.slice(0, queryIndex);
+  if (pathname.startsWith("/api/auth/callback")) {
+    return `${pathname}?[REDACTED]`;
+  }
+
+  const params = new URLSearchParams(rawUrl.slice(queryIndex + 1));
+  let redacted = false;
+  for (const key of ["code", "state", "access_token", "refresh_token", "id_token"]) {
+    if (params.has(key)) {
+      params.set(key, "[REDACTED]");
+      redacted = true;
+    }
+  }
+
+  return redacted ? `${pathname}?${params.toString()}` : rawUrl;
+}
+
 function resolvePrettyTransport(): { target: string } | undefined {
   if (env.NODE_ENV !== "development") {
     return undefined;
@@ -58,7 +81,29 @@ export async function buildApp(): Promise<FastifyInstance> {
         "req.headers.cookie",
         'res.headers["set-cookie"]',
         "set-cookie",
+        "req.query.code",
+        "req.query.state",
+        "req.query.access_token",
+        "req.query.id_token",
+        "*.code",
+        "*.state",
+        "*.access_token",
+        "*.refresh_token",
+        "*.id_token",
+        "*.clientSecret",
+        "*.client_secret",
       ],
+      serializers: {
+        req(request) {
+          return {
+            method: request.method,
+            url: sanitizeRequestUrl(request.url),
+            host: request.headers.host,
+            remoteAddress: request.ip,
+            remotePort: request.socket?.remotePort,
+          };
+        },
+      },
       ...(transport ? { transport } : {}),
     },
   });

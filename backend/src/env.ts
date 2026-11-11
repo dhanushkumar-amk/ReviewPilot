@@ -3,6 +3,11 @@ import { z } from "zod";
 
 dotenv.config();
 
+const optionalNonEmptyString = z.preprocess(
+  (value) => (typeof value === "string" && value.trim().length === 0 ? undefined : value),
+  z.string().trim().min(1).optional()
+);
+
 const envSchema = z
   .object({
     PORT: z.coerce.number().int().min(1).max(65535).default(4000),
@@ -15,6 +20,10 @@ const envSchema = z
     INNGEST_SIGNING_KEY: z.string().trim().min(1).optional(),
     BETTER_AUTH_SECRET: z.string().trim().min(32),
     BETTER_AUTH_URL: z.url(),
+    GOOGLE_CLIENT_ID: optionalNonEmptyString,
+    GOOGLE_CLIENT_SECRET: optionalNonEmptyString,
+    GITHUB_CLIENT_ID: optionalNonEmptyString,
+    GITHUB_CLIENT_SECRET: optionalNonEmptyString,
   })
   .superRefine((data, ctx) => {
     if (data.NODE_ENV !== "test") {
@@ -59,6 +68,16 @@ const envSchema = z
           message: "INNGEST_SIGNING_KEY is required in production",
         });
       }
+
+      const googleEnabled = Boolean(data.GOOGLE_CLIENT_ID && data.GOOGLE_CLIENT_SECRET);
+      const githubEnabled = Boolean(data.GITHUB_CLIENT_ID && data.GITHUB_CLIENT_SECRET);
+      if (!googleEnabled && !githubEnabled) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["GOOGLE_CLIENT_ID"],
+          message: "At least one OAuth provider (Google or GitHub) must be configured in production",
+        });
+      }
     }
   });
 
@@ -78,3 +97,5 @@ if (!parsed.success) {
 
 export type Env = z.infer<typeof envSchema>;
 export const env: Env = parsed.data;
+export const isGoogleAuthEnabled = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
+export const isGithubAuthEnabled = Boolean(env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET);

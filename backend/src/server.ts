@@ -1,9 +1,13 @@
 import { buildApp } from "./app.js";
 import { prisma } from "./db.js";
-import { env } from "./env.js";
+import { env, isGithubAuthEnabled, isGoogleAuthEnabled } from "./env.js";
 
 async function start(): Promise<void> {
   const app = await buildApp();
+  if (env.NODE_ENV === "development") {
+    app.log.info(`Google OAuth provider: ${isGoogleAuthEnabled ? "enabled" : "disabled (missing credentials)"}`);
+    app.log.info(`GitHub OAuth provider: ${isGithubAuthEnabled ? "enabled" : "disabled (missing credentials)"}`);
+  }
   let shuttingDown = false;
 
   const shutdown = async (signal: NodeJS.Signals) => {

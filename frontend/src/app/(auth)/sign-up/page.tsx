@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useWatch } from "react-hook-form";
 import {
@@ -29,12 +30,16 @@ import {
 import { FieldGroup } from "@/components/ui/field";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Spinner } from "@/components/ui/spinner";
+import { SocialButtons } from "@/src/features/auth/social-buttons";
 import { authClient } from "@/src/lib/auth-client";
 import { signUpSchema, type SignUpValues } from "@/src/lib/auth-schemas";
+import { getSafeRedirectPath } from "@/src/lib/safe-redirect";
 
 const isDev = process.env.NODE_ENV === "development";
 
 export default function SignUpPage() {
+  const searchParams = useSearchParams();
+  const safeNext = getSafeRedirectPath(searchParams.get("next"));
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [submitted, setSubmitted] = React.useState(false);
 
@@ -107,7 +112,10 @@ export default function SignUpPage() {
             </AlertDescription>
           </Alert>
         ) : (
-          <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-5">
+          <div className="flex flex-col gap-5">
+            <SocialButtons nextPath={safeNext} disabled={isSubmitting} />
+
+            <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-5">
             {serverError ? (
               <Alert variant="destructive">
                 <AlertCircleIcon />
@@ -203,12 +211,13 @@ export default function SignUpPage() {
               </FormField>
             </FieldGroup>
 
-            <Button type="submit" size="lg" disabled={isSubmitting} className="w-full">
-              {isSubmitting ? <Spinner data-icon="inline-start" /> : null}
-              <span>Create account</span>
-              {!isSubmitting ? <ArrowRightIcon data-icon="inline-end" /> : null}
-            </Button>
-          </form>
+              <Button type="submit" size="lg" disabled={isSubmitting} className="w-full">
+                {isSubmitting ? <Spinner data-icon="inline-start" /> : null}
+                <span>Create account</span>
+                {!isSubmitting ? <ArrowRightIcon data-icon="inline-end" /> : null}
+              </Button>
+            </form>
+          </div>
         )}
       </CardContent>
 

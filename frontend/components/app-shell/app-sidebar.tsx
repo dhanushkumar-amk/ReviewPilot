@@ -27,7 +27,7 @@ import {
   getUserInitials,
   useInitialAuthUser,
 } from "@/components/auth/auth-user-provider";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -363,6 +363,12 @@ export function AppSidebar() {
                   }
                 >
                   <Avatar className="size-8 rounded-lg">
+                    <AvatarImage
+                      src={currentUser?.image ?? undefined}
+                      alt={displayName}
+                      referrerPolicy="no-referrer"
+                      className="rounded-lg"
+                    />
                     <AvatarFallback className="rounded-lg">
                       {initials}
                     </AvatarFallback>

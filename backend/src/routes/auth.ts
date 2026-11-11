@@ -1,9 +1,13 @@
 import { fromNodeHeaders } from "better-auth/node";
 import type { FastifyInstance } from "fastify";
 import { auth } from "../auth.js";
-import { env } from "../env.js";
+import { env, isGithubAuthEnabled, isGoogleAuthEnabled } from "../env.js";
 
 export async function authRoutes(app: FastifyInstance): Promise<void> {
+  app.get("/api/auth-providers", async () => ({
+    google: isGoogleAuthEnabled,
+    github: isGithubAuthEnabled,
+  }));
   app.addContentTypeParser(
     ["application/json", "application/x-www-form-urlencoded"],
     { parseAs: "string" },

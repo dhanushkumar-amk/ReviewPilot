@@ -28,16 +28,50 @@ import {
 import { FieldGroup } from "@/components/ui/field";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Spinner } from "@/components/ui/spinner";
+import { SocialButtons } from "@/src/features/auth/social-buttons";
 import { authClient } from "@/src/lib/auth-client";
 import { loginSchema, type LoginValues } from "@/src/lib/auth-schemas";
 import { getSafeRedirectPath } from "@/src/lib/safe-redirect";
 
 const isDev = process.env.NODE_ENV === "development";
 
+function getOAuthErrorMessage(errorCode: string | null): string | null {
+  if (!errorCode) {
+    return null;
+  }
+
+  const normalized = errorCode.trim().toLowerCase();
+
+  if (
+    normalized === "access_denied" ||
+    normalized === "user_cancelled" ||
+    normalized === "consent_required"
+  ) {
+    return "Social sign-in was canceled. You can try again or sign in with email and password.";
+  }
+
+  if (normalized === "email_not_verified" || normalized === "email_not_found") {
+    return "Your provider account does not have a verified email address. Verify your primary email there or use email and password.";
+  }
+
+  if (
+    normalized === "account_not_linked" ||
+    normalized === "email_does_not_match" ||
+    normalized === "unable_to_link_account" ||
+    normalized === "account_already_linked_to_different_user" ||
+    normalized === "account_ownership_conflict"
+  ) {
+    return "This social account could not be linked automatically. Sign in with your verified email and password first.";
+  }
+
+  return "Unable to complete social sign-in. Please try again or use your email and password.";
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const safeNext = getSafeRedirectPath(searchParams.get("next"));
+  const oauthError = getOAuthErrorMessage(searchParams.get("error"));
 
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [unverifiedEmail, setUnverifiedEmail] = React.useState<string | null>(null);
@@ -161,7 +195,15 @@ export default function LoginPage() {
               ) : null}
             </AlertDescription>
           </Alert>
+        ) : oauthError ? (
+          <Alert>
+            <AlertCircleIcon />
+            <AlertTitle>Social sign-in interrupted</AlertTitle>
+            <AlertDescription>{oauthError}</AlertDescription>
+          </Alert>
         ) : null}
+
+        <SocialButtons nextPath={safeNext} disabled={isSubmitting} />
 
         <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-5">
           <FieldGroup>

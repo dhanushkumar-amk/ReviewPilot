@@ -7,6 +7,7 @@ export interface AuthenticatedUser {
   name: string;
   email: string;
   emailVerified: boolean;
+  image?: string | null;
 }
 
 const AuthUserContext = React.createContext<AuthenticatedUser | null>(null);

@@ -11,6 +11,7 @@ export async function meRoutes(app: FastifyInstance): Promise<void> {
         name: user.name,
         email: user.email,
         emailVerified: user.emailVerified,
+        image: user.image ?? null,
       },
     };
   });
