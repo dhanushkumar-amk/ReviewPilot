@@ -36,6 +36,14 @@ export const auth = betterAuth({
         console.info(`\n[Auth Dev] Password reset link for ${user.email}: ${url}\n`);
       }
     },
+    onExistingUserSignUp: async ({ user }) => {
+      if (env.NODE_ENV === "development") {
+        const nextStep = user.emailVerified
+          ? "Account is already verified — sign in at /login."
+          : 'Account already exists (unverified) — sign in at /login and click "Resend verification email".';
+        console.info(`\n[Auth Dev] Sign-up skipped for existing email ${user.email}: ${nextStep}\n`);
+      }
+    },
   },
   emailVerification: {
     sendOnSignUp: true,

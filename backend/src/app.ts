@@ -36,6 +36,13 @@ export async function buildApp(): Promise<FastifyInstance> {
     requestIdHeader: "x-request-id",
     logController: new LogController({
       requestIdLogLabel: "requestId",
+      disableRequestLogging: (req) => {
+        if (env.NODE_ENV !== "development") {
+          return false;
+        }
+        const path = req.url.split("?")[0];
+        return path === "/api/inngest" && (req.method === "PUT" || req.method === "GET");
+      },
     }),
     genReqId(req) {
       const header = req.headers["x-request-id"];
