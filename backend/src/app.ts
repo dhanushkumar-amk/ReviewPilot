@@ -3,7 +3,11 @@ import { createRequire } from "node:module";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import Fastify, { LogController, type FastifyError, type FastifyInstance } from "fastify";
+import { fastifyPlugin as inngestFastifyPlugin } from "inngest/fastify";
 import { env } from "./env.js";
+import { inngest } from "./inngest/client.js";
+import { functions } from "./inngest/index.js";
+import { devRoutes } from "./routes/dev.js";
 import { healthRoutes } from "./routes/health.js";
 
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9._-]{1,128}$/;
@@ -92,6 +96,24 @@ export async function buildApp(): Promise<FastifyInstance> {
   });
 
   await app.register(healthRoutes);
+
+  await app.register(async (inngestScope) => {
+    inngestScope.addHook("onRoute", (routeOptions) => {
+      routeOptions.bodyLimit = 8 * 1024 * 1024;
+    });
+
+    await inngestScope.register(inngestFastifyPlugin, {
+      client: inngest,
+      functions,
+      options: {
+        servePath: "/api/inngest",
+      },
+    });
+  });
+
+  if (env.NODE_ENV === "development") {
+    await app.register(devRoutes);
+  }
 
   return app;
 }

@@ -12,7 +12,8 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:generate": "prisma generate",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "inngest:dev": "npx --ignore-scripts=false inngest-cli@latest dev -u http://localhost:4000/api/inngest"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
@@ -27,6 +28,7 @@
     "@prisma/client": "^7.10.1",
     "dotenv": "^18.0.10",
     "fastify": "^5.12.8",
+    "inngest": "^4.26.2",
     "pg": "^8.23.1",
     "zod": "^4.6.7"
   }

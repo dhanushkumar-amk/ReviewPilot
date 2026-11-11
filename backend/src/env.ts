@@ -10,26 +10,53 @@ const envSchema = z
     WEB_ORIGIN: z.url(),
     DATABASE_URL: z.url(),
     DIRECT_URL: z.url(),
+    INNGEST_DEV: z.literal("1").optional(),
+    INNGEST_EVENT_KEY: z.string().trim().min(1).optional(),
+    INNGEST_SIGNING_KEY: z.string().trim().min(1).optional(),
   })
   .superRefine((data, ctx) => {
-    if (data.NODE_ENV === "test") {
-      return;
+    if (data.NODE_ENV !== "test") {
+      if (!data.DATABASE_URL.includes("-pooler")) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["DATABASE_URL"],
+          message: "DATABASE_URL must be a pooled connection string",
+        });
+      }
+
+      if (data.DIRECT_URL.includes("-pooler")) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["DIRECT_URL"],
+          message: "DIRECT_URL must not be a pooled connection string",
+        });
+      }
     }
 
-    if (!data.DATABASE_URL.includes("-pooler")) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["DATABASE_URL"],
-        message: "DATABASE_URL must be a pooled connection string",
-      });
-    }
+    if (data.NODE_ENV === "production") {
+      if (data.INNGEST_DEV !== undefined) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["INNGEST_DEV"],
+          message: "INNGEST_DEV must not be set in production",
+        });
+      }
 
-    if (data.DIRECT_URL.includes("-pooler")) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["DIRECT_URL"],
-        message: "DIRECT_URL must not be a pooled connection string",
-      });
+      if (!data.INNGEST_EVENT_KEY) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["INNGEST_EVENT_KEY"],
+          message: "INNGEST_EVENT_KEY is required in production",
+        });
+      }
+
+      if (!data.INNGEST_SIGNING_KEY) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["INNGEST_SIGNING_KEY"],
+          message: "INNGEST_SIGNING_KEY is required in production",
+        });
+      }
     }
   });
 
