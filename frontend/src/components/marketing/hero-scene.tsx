@@ -20,9 +20,9 @@ const FILES = [
   { name: "src/queue/event-worker.ts", issue: null },
   { name: "src/middleware/cors.ts", issue: null },
   { name: "src/api/routes/preview.ts", issue: "SSRF preview", color: "#FFAC00" },
-  { name: "src/services/webhook-client.ts", issue: "Hardcoded token", color: "#C10007" },
+  { name: "src/services/webhook-client.ts", issue: "Hardcoded token", color: "#CF222E" },
   { name: "src/auth/jwt-verifier.ts", issue: "Missing auth check", color: "#FFAC00" },
-  { name: "src/db/query-builder.ts", issue: "SQL injection", color: "#C10007" },
+  { name: "src/db/query-builder.ts", issue: "SQL injection", color: "#CF222E" },
 ];
 
 function SceneContent({ replayKey }: { replayKey?: number }) {
@@ -229,7 +229,7 @@ function SceneContent({ replayKey }: { replayKey?: number }) {
               const issueIndex =
                 file.name.includes("preview") ? 0 : file.name.includes("webhook") ? 1 : 2;
               const isFlagActive = isFlagged && activeIssues[issueIndex];
-              const lineColor = isFlagActive ? file.color || "#C10007" : neutralLineColor;
+              const lineColor = isFlagActive ? file.color || "#CF222E" : neutralLineColor;
 
               return (
                 <mesh
@@ -265,7 +265,7 @@ function SceneContent({ replayKey }: { replayKey?: number }) {
                 <div className="flex items-center gap-1.5 rounded border border-border bg-card px-2 py-0.5 font-mono text-[10px] font-semibold text-foreground shadow-xs whitespace-nowrap">
                   <span
                     className="size-1.5 rounded-full shrink-0"
-                    style={{ backgroundColor: file.color || "#C10007" }}
+                    style={{ backgroundColor: file.color || "#CF222E" }}
                   />
                   <span>{file.issue}</span>
                 </div>

@@ -33,7 +33,7 @@ const isDev = process.env.NODE_ENV === "development";
 
 export default function ForgotPasswordPage() {
   const [submitted, setSubmitted] = React.useState(false);
-  const [rateLimitError, setRateLimitError] = React.useState<string | null>(null);
+  const [submitError, setSubmitError] = React.useState<string | null>(null);
 
   const {
     register,
@@ -47,15 +47,25 @@ export default function ForgotPasswordPage() {
   });
 
   const onSubmit = async (values: ForgotPasswordValues) => {
-    setRateLimitError(null);
+    setSubmitError(null);
 
-    const { error } = await authClient.requestPasswordReset({
-      email: values.email,
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
+    try {
+      const { error } = await authClient.requestPasswordReset({
+        email: values.email,
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
 
-    if (error?.status === 429) {
-      setRateLimitError("Too many requests. Please wait a minute and try again.");
+      if (error?.status === 429) {
+        setSubmitError("Too many requests. Please wait a minute and try again.");
+        return;
+      }
+
+      if (error && error.status >= 500) {
+        setSubmitError("Unable to reach the authentication service. Please try again shortly.");
+        return;
+      }
+    } catch {
+      setSubmitError("Unable to reach the backend server. Check that it is running and try again.");
       return;
     }
 
@@ -87,18 +97,19 @@ export default function ForgotPasswordPage() {
               </p>
               {isDev ? (
                 <p className="font-mono text-xs text-muted-foreground">
-                  Development mode: check the backend terminal for the reset link.
+                  Development mode: if this email is registered, the reset link is logged in the
+                  backend server terminal (port 4000). No link is logged for unregistered emails.
                 </p>
               ) : null}
             </AlertDescription>
           </Alert>
         ) : (
           <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-5">
-            {rateLimitError ? (
+            {submitError ? (
               <Alert variant="destructive">
                 <AlertCircleIcon />
-                <AlertTitle>Please try again later</AlertTitle>
-                <AlertDescription>{rateLimitError}</AlertDescription>
+                <AlertTitle>Unable to send reset link</AlertTitle>
+                <AlertDescription>{submitError}</AlertDescription>
               </Alert>
             ) : null}
 

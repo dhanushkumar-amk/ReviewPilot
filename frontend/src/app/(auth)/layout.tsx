@@ -1,11 +1,12 @@
 import * as React from "react";
 import Link from "next/link";
 import { ShieldCheckIcon } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="light flex min-h-screen flex-col bg-background text-sm text-foreground">
+    <div className="flex min-h-screen flex-col bg-background text-sm text-foreground">
       <header className="h-14 w-full border-b border-border bg-card">
         <div className="mx-auto flex h-full w-full max-w-5xl items-center justify-between px-4 sm:px-6">
           <Link
@@ -29,6 +30,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             >
               <span>Status</span>
             </Button>
+            <ThemeToggle />
             <Button
               variant="outline"
               size="sm"

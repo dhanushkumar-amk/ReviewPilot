@@ -100,7 +100,8 @@ export default function SignUpPage() {
               </p>
               {isDev ? (
                 <p className="font-mono text-xs text-muted-foreground">
-                  Development mode: check the backend terminal for the verification link.
+                  Development mode: check the backend server terminal (port 4000) for the
+                  verification link.
                 </p>
               ) : null}
             </AlertDescription>

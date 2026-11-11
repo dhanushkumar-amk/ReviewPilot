@@ -33,7 +33,7 @@ export const auth = betterAuth({
       // TODO: Send password reset link through a real transactional email provider before production.
       assertEmailProviderConfigured();
       if (env.NODE_ENV === "development") {
-        console.info(`[Auth Dev] Password reset link for ${user.email}: ${url}`);
+        console.info(`\n[Auth Dev] Password reset link for ${user.email}: ${url}\n`);
       }
     },
   },
@@ -44,7 +44,7 @@ export const auth = betterAuth({
       // TODO: Send verification link through a real transactional email provider before production.
       assertEmailProviderConfigured();
       if (env.NODE_ENV === "development") {
-        console.info(`[Auth Dev] Email verification link for ${user.email}: ${url}`);
+        console.info(`\n[Auth Dev] Email verification link for ${user.email}: ${url}\n`);
       }
     },
   },

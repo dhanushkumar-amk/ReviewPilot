@@ -37,7 +37,7 @@ export function HeroPoster({ className, animateOnMobile = false }: HeroPosterPro
       .fromTo(
         flagged,
         { fill: "#E4E4E7" },
-        { fill: "#C10007", duration: 0.3, stagger: 0.08, ease: "power2.out" },
+        { fill: "#CF222E", duration: 0.3, stagger: 0.08, ease: "power2.out" },
         "+=0.2"
       )
       .fromTo(
@@ -126,7 +126,7 @@ export function HeroPoster({ className, animateOnMobile = false }: HeroPosterPro
         </text>
         <rect x="20" y="44" width="190" height="5" rx="2.5" fill="var(--border)" />
         {/* Flagged Token line */}
-        <rect className="poster-flagged-line" x="20" y="60" width="300" height="6" rx="2.5" fill="#C10007" />
+        <rect className="poster-flagged-line" x="20" y="60" width="300" height="6" rx="2.5" fill="#CF222E" />
         <rect x="20" y="76" width="160" height="5" rx="2.5" fill="var(--border)" />
       </g>
 
@@ -138,7 +138,7 @@ export function HeroPoster({ className, animateOnMobile = false }: HeroPosterPro
         </text>
         <rect x="20" y="44" width="220" height="5" rx="2.5" fill="var(--border)" />
         {/* Flagged SQLi line */}
-        <rect className="poster-flagged-line" x="20" y="60" width="290" height="6" rx="2.5" fill="#C10007" />
+        <rect className="poster-flagged-line" x="20" y="60" width="290" height="6" rx="2.5" fill="#CF222E" />
         <rect x="20" y="76" width="140" height="5" rx="2.5" fill="var(--border)" />
         <rect x="20" y="90" width="240" height="5" rx="2.5" fill="var(--border)" />
       </g>
@@ -150,20 +150,20 @@ export function HeroPoster({ className, animateOnMobile = false }: HeroPosterPro
 
       {/* Annotation Tag 1: SQL Injection callout */}
       <g className="poster-overlay" transform="translate(490, 110)">
-        <line x1="0" y1="14" x2="-65" y2="28" stroke="#C10007" strokeWidth="1" strokeDasharray="3 3" />
-        <rect width="148" height="26" rx="4" fill="var(--card)" stroke="#C10007" strokeWidth="1" />
-        <circle cx="12" cy="13" r="3" fill="#C10007" />
-        <text x="22" y="17" fill="#C10007" fontSize="11" fontFamily="monospace" fontWeight="600">
+        <line x1="0" y1="14" x2="-65" y2="28" stroke="#CF222E" strokeWidth="1" strokeDasharray="3 3" />
+        <rect width="148" height="26" rx="4" fill="var(--card)" stroke="#CF222E" strokeWidth="1" />
+        <circle cx="12" cy="13" r="3" fill="#CF222E" />
+        <text x="22" y="17" fill="#CF222E" fontSize="11" fontFamily="monospace" fontWeight="600">
           CWE-89: SQL injection
         </text>
       </g>
 
       {/* Annotation Tag 2: Hardcoded token callout */}
       <g className="poster-overlay" transform="translate(510, 175)">
-        <line x1="0" y1="14" x2="-75" y2="24" stroke="#C10007" strokeWidth="1" strokeDasharray="3 3" />
-        <rect width="142" height="26" rx="4" fill="var(--card)" stroke="#C10007" strokeWidth="1" />
-        <circle cx="12" cy="13" r="3" fill="#C10007" />
-        <text x="22" y="17" fill="#C10007" fontSize="11" fontFamily="monospace" fontWeight="600">
+        <line x1="0" y1="14" x2="-75" y2="24" stroke="#CF222E" strokeWidth="1" strokeDasharray="3 3" />
+        <rect width="142" height="26" rx="4" fill="var(--card)" stroke="#CF222E" strokeWidth="1" />
+        <circle cx="12" cy="13" r="3" fill="#CF222E" />
+        <text x="22" y="17" fill="#CF222E" fontSize="11" fontFamily="monospace" fontWeight="600">
           CWE-798: Bearer token
         </text>
       </g>
@@ -177,22 +177,22 @@ export function HeroPoster({ className, animateOnMobile = false }: HeroPosterPro
         </text>
 
         {/* Removed line */}
-        <rect x="12" y="42" width="316" height="22" rx="3" fill="#C10007" fillOpacity="0.1" />
-        <text x="20" y="57" fill="#C10007" fontSize="10" fontFamily="monospace">
+        <rect x="12" y="42" width="316" height="22" rx="3" fill="#CF222E" fillOpacity="0.1" />
+        <text x="20" y="57" fill="#CF222E" fontSize="10" fontFamily="monospace">
           {'- const q = `SELECT * FROM users WHERE id = ${id}`;'}
         </text>
 
         {/* Added line */}
-        <rect x="12" y="68" width="316" height="22" rx="3" fill="#058378" fillOpacity="0.1" />
-        <text x="20" y="83" fill="#058378" fontSize="10" fontFamily="monospace">
+        <rect x="12" y="68" width="316" height="22" rx="3" fill="#1A7F37" fillOpacity="0.1" />
+        <text x="20" y="83" fill="#1A7F37" fontSize="10" fontFamily="monospace">
           {'+ const q = sql`SELECT * FROM users WHERE id = ${id}`;'}
         </text>
 
         {/* Test status footer */}
         <line x1="0" y1="102" x2="340" y2="102" stroke="var(--border)" strokeWidth="1" />
-        <circle cx="22" cy="124" r="5" fill="#058378" />
+        <circle cx="22" cy="124" r="5" fill="#1A7F37" />
         <path d="M19.5 124 L21.5 126 L25 122" stroke="#FFFFFF" strokeWidth="1.2" strokeLinecap="round" />
-        <text x="34" y="128" fill="#058378" fontSize="11" fontFamily="monospace" fontWeight="600">
+        <text x="34" y="128" fill="#1A7F37" fontSize="11" fontFamily="monospace" fontWeight="600">
           Sandbox tests passed (14/14 test suites)
         </text>
       </g>
@@ -200,8 +200,8 @@ export function HeroPoster({ className, animateOnMobile = false }: HeroPosterPro
       {/* Foreground Element 2: Pull Request Landed Card */}
       <g className="poster-overlay" transform="translate(360, 320)" filter="url(#card-shadow)">
         <rect width="360" height="120" rx="8" fill="var(--card)" stroke="var(--border)" strokeWidth="1" />
-        <rect x="14" y="14" width="46" height="18" rx="4" fill="#058378" fillOpacity="0.12" />
-        <text x="21" y="27" fill="#058378" fontSize="10" fontFamily="monospace" fontWeight="600">
+        <rect x="14" y="14" width="46" height="18" rx="4" fill="#1A7F37" fillOpacity="0.12" />
+        <text x="21" y="27" fill="#1A7F37" fontSize="10" fontFamily="monospace" fontWeight="600">
           OPEN
         </text>
         <text x="68" y="27" fill="var(--foreground)" fontSize="12" fontWeight="600">
