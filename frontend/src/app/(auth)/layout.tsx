@@ -47,10 +47,25 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="flex w-full max-w-[440px] flex-col gap-5">
           <React.Suspense fallback={null}>{children}</React.Suspense>
 
-          <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-            <ShieldCheckIcon className="size-3.5 shrink-0" />
-            <span>Protected by encrypted HTTP-only session cookies</span>
-          </p>
+          <div className="flex flex-col items-center gap-2 text-xs text-muted-foreground">
+            <p className="flex items-center justify-center gap-1.5">
+              <ShieldCheckIcon className="size-3.5 shrink-0" />
+              <span>Protected by encrypted HTTP-only session cookies</span>
+            </p>
+            <nav aria-label="Legal navigation" className="flex items-center gap-3">
+              <Link href="/terms" className="hover:text-foreground transition-colors underline-offset-4 hover:underline">
+                Terms
+              </Link>
+              <span aria-hidden="true">·</span>
+              <Link href="/privacy" className="hover:text-foreground transition-colors underline-offset-4 hover:underline">
+                Privacy
+              </Link>
+              <span aria-hidden="true">·</span>
+              <Link href="/security" className="hover:text-foreground transition-colors underline-offset-4 hover:underline">
+                Security
+              </Link>
+            </nav>
+          </div>
         </div>
       </main>
     </div>

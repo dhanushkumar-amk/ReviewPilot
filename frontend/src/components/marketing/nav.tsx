@@ -43,22 +43,23 @@ export function MarketingNav() {
   }, []);
 
   const navLinks = [
-    { label: "Features", href: "#features" },
-    { label: "Security", href: "#security" },
-    { label: "Pricing", href: "#pricing" },
-    { label: "FAQ", href: "#faq" },
+    { label: "Features", href: "/#features" },
+    { label: "Security", href: "/security" },
+    { label: "Pricing", href: "/#pricing" },
+    { label: "FAQ", href: "/#faq" },
   ];
 
-  const handleSmoothScroll = (
+  const handleNavClick = (
     e: React.MouseEvent<HTMLAnchorElement>,
     href: string
   ) => {
-    if (href.startsWith("#")) {
-      e.preventDefault();
-      const el = document.querySelector(href);
+    setMobileOpen(false);
+    if (href.startsWith("/#") && window.location.pathname === "/") {
+      const targetId = href.slice(1);
+      const el = document.querySelector(targetId);
       if (el) {
+        e.preventDefault();
         el.scrollIntoView({ behavior: "smooth" });
-        setMobileOpen(false);
       }
     }
   };
@@ -97,14 +98,14 @@ export function MarketingNav() {
             aria-label="Marketing navigation"
           >
             {navLinks.map((link) => (
-              <a
+              <Link
                 key={link.href}
                 href={link.href}
-                onClick={(e) => handleSmoothScroll(e, link.href)}
+                onClick={(e) => handleNavClick(e, link.href)}
                 className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
               >
                 {link.label}
-              </a>
+              </Link>
             ))}
           </nav>
 
@@ -164,14 +165,14 @@ export function MarketingNav() {
 
                 <nav className="flex flex-col gap-3" aria-label="Mobile menu">
                   {navLinks.map((link) => (
-                    <a
+                    <Link
                       key={link.href}
                       href={link.href}
-                      onClick={(e) => handleSmoothScroll(e, link.href)}
+                      onClick={(e) => handleNavClick(e, link.href)}
                       className="text-sm font-medium text-muted-foreground hover:text-foreground py-1"
                     >
                       {link.label}
-                    </a>
+                    </Link>
                   ))}
                 </nav>
 

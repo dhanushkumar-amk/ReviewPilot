@@ -13,32 +13,44 @@ export function MarketingFooter() {
           <span className="font-heading">ReviewPilot</span>
         </div>
 
-        {/* Anchor links that exist */}
+        {/* Anchor & Legal links */}
         <nav className="flex flex-wrap items-center gap-6" aria-label="Footer navigation">
-          <a
-            href="#features"
+          <Link
+            href="/#features"
             className="hover:text-foreground transition-colors outline-none focus-visible:ring-1 focus-visible:ring-ring rounded"
           >
             Features
-          </a>
-          <a
-            href="#security"
-            className="hover:text-foreground transition-colors outline-none focus-visible:ring-1 focus-visible:ring-ring rounded"
-          >
-            Security
-          </a>
-          <a
-            href="#pricing"
+          </Link>
+          <Link
+            href="/#pricing"
             className="hover:text-foreground transition-colors outline-none focus-visible:ring-1 focus-visible:ring-ring rounded"
           >
             Pricing
-          </a>
-          <a
-            href="#faq"
+          </Link>
+          <Link
+            href="/#faq"
             className="hover:text-foreground transition-colors outline-none focus-visible:ring-1 focus-visible:ring-ring rounded"
           >
             FAQ
-          </a>
+          </Link>
+          <Link
+            href="/security"
+            className="hover:text-foreground transition-colors outline-none focus-visible:ring-1 focus-visible:ring-ring rounded"
+          >
+            Security
+          </Link>
+          <Link
+            href="/privacy"
+            className="hover:text-foreground transition-colors outline-none focus-visible:ring-1 focus-visible:ring-ring rounded"
+          >
+            Privacy
+          </Link>
+          <Link
+            href="/terms"
+            className="hover:text-foreground transition-colors outline-none focus-visible:ring-1 focus-visible:ring-ring rounded"
+          >
+            Terms
+          </Link>
           <Link
             href="/dashboard"
             className="hover:text-foreground transition-colors outline-none focus-visible:ring-1 focus-visible:ring-ring rounded"
