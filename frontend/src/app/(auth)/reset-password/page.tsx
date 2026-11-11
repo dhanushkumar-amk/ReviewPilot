@@ -4,10 +4,17 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { AlertCircleIcon, CheckCircle2Icon } from "lucide-react";
+import { useForm, useWatch } from "react-hook-form";
+import {
+  AlertCircleIcon,
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  CheckCircle2Icon,
+  LockIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 import { FormField } from "@/components/auth/form-field";
+import { PasswordChecklist } from "@/components/auth/password-checklist";
 import { PasswordInput } from "@/components/auth/password-input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -19,6 +26,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { FieldGroup } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
 import { authClient } from "@/src/lib/auth-client";
 import { resetPasswordSchema, type ResetPasswordValues } from "@/src/lib/auth-schemas";
@@ -33,6 +41,7 @@ export default function ResetPasswordPage() {
   const [completed, setCompleted] = React.useState(false);
 
   const {
+    control,
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
@@ -43,6 +52,8 @@ export default function ResetPasswordPage() {
       confirmPassword: "",
     },
   });
+
+  const newPasswordValue = useWatch({ control, name: "newPassword", defaultValue: "" });
 
   const hasInvalidToken = Boolean(tokenError) || !token;
 
@@ -78,13 +89,17 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Reset password</CardTitle>
-        <CardDescription>Choose a new password for your ReviewPilot account.</CardDescription>
+    <Card className="shadow-xs sm:[--card-spacing:--spacing(6)]">
+      <CardHeader className="border-b">
+        <CardTitle className="text-xl font-semibold tracking-tight">
+          Choose a new password
+        </CardTitle>
+        <CardDescription>
+          Update the password for your ReviewPilot account.
+        </CardDescription>
       </CardHeader>
 
-      <CardContent className="flex flex-col gap-4">
+      <CardContent className="flex flex-col gap-5">
         {completed ? (
           <Alert>
             <CheckCircle2Icon />
@@ -102,7 +117,7 @@ export default function ResetPasswordPage() {
             </AlertDescription>
           </Alert>
         ) : (
-          <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
+          <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-5">
             {serverError ? (
               <Alert variant="destructive">
                 <AlertCircleIcon />
@@ -111,44 +126,61 @@ export default function ResetPasswordPage() {
               </Alert>
             ) : null}
 
-            <FormField
-              id="reset-new-password"
-              label="New password"
-              error={errors.newPassword?.message}
-            >
-              <PasswordInput
+            <FieldGroup>
+              <FormField
                 id="reset-new-password"
-                autoComplete="new-password"
-                autoFocus
-                placeholder="At least 10 characters"
-                disabled={isSubmitting}
-                aria-invalid={Boolean(errors.newPassword)}
-                aria-describedby={errors.newPassword ? "reset-new-password-error" : undefined}
-                {...register("newPassword")}
-              />
-            </FormField>
-
-            <FormField
-              id="reset-confirm-password"
-              label="Confirm password"
-              error={errors.confirmPassword?.message}
-            >
-              <PasswordInput
-                id="reset-confirm-password"
-                autoComplete="new-password"
-                placeholder="Re-enter your new password"
-                disabled={isSubmitting}
-                aria-invalid={Boolean(errors.confirmPassword)}
-                aria-describedby={
-                  errors.confirmPassword ? "reset-confirm-password-error" : undefined
+                label="New password"
+                hint={
+                  <PasswordChecklist
+                    id="reset-new-password-checklist"
+                    password={newPasswordValue}
+                  />
                 }
-                {...register("confirmPassword")}
-              />
-            </FormField>
+                error={errors.newPassword?.message}
+              >
+                <PasswordInput
+                  id="reset-new-password"
+                  groupClassName="h-9"
+                  startIcon={<LockIcon />}
+                  autoComplete="new-password"
+                  autoFocus
+                  placeholder="Create a strong password"
+                  disabled={isSubmitting}
+                  aria-invalid={Boolean(errors.newPassword)}
+                  aria-describedby={
+                    errors.newPassword
+                      ? "reset-new-password-checklist reset-new-password-error"
+                      : "reset-new-password-checklist"
+                  }
+                  {...register("newPassword")}
+                />
+              </FormField>
 
-            <Button type="submit" disabled={isSubmitting} className="w-full">
+              <FormField
+                id="reset-confirm-password"
+                label="Confirm password"
+                error={errors.confirmPassword?.message}
+              >
+                <PasswordInput
+                  id="reset-confirm-password"
+                  groupClassName="h-9"
+                  startIcon={<LockIcon />}
+                  autoComplete="new-password"
+                  placeholder="Re-enter your new password"
+                  disabled={isSubmitting}
+                  aria-invalid={Boolean(errors.confirmPassword)}
+                  aria-describedby={
+                    errors.confirmPassword ? "reset-confirm-password-error" : undefined
+                  }
+                  {...register("confirmPassword")}
+                />
+              </FormField>
+            </FieldGroup>
+
+            <Button type="submit" size="lg" disabled={isSubmitting} className="w-full">
               {isSubmitting ? <Spinner data-icon="inline-start" /> : null}
               <span>Reset password</span>
+              {!isSubmitting ? <ArrowRightIcon data-icon="inline-end" /> : null}
             </Button>
           </form>
         )}
@@ -158,20 +190,20 @@ export default function ResetPasswordPage() {
         {hasInvalidToken ? (
           <Link
             href="/forgot-password"
-            className="text-xs font-medium text-foreground underline underline-offset-4"
+            className="text-xs font-medium text-link underline-offset-4 hover:underline"
           >
             Request a new reset link
           </Link>
         ) : (
           <Link
             href="/login"
-            className="text-xs font-medium text-foreground underline underline-offset-4"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-link underline-offset-4 hover:underline"
           >
-            Back to sign in
+            <ArrowLeftIcon className="size-3.5 shrink-0" />
+            <span>Back to sign in</span>
           </Link>
         )}
       </CardFooter>
     </Card>
   );
 }
-

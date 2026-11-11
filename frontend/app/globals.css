@@ -3,7 +3,7 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:where(.dark, .dark *));
+@custom-variant dark (&:where(.dark, .dark *):not(.light, .light *));
 
 @theme inline {
   --color-background: var(--background);
@@ -57,8 +57,8 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-:root,
-.light {
+:root {
+  color-scheme: light;
   --radius: 0.5rem;
   --background: #F7F7F7;
   --foreground: #111111;
@@ -99,6 +99,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --radius: 0.5rem;
   --background: #090A0C;
   --foreground: #EDEDED;
@@ -136,6 +137,44 @@
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
+}
+
+.light,
+.dark .light,
+html.dark:has(.light) {
+  color-scheme: light;
+  --radius: 0.5rem;
+  --background: #F7F7F7;
+  --foreground: #111111;
+  --card: #FFFFFF;
+  --card-foreground: #111111;
+  --popover: #FFFFFF;
+  --popover-foreground: #111111;
+  --primary: #F6821F;
+  --primary-foreground: #111111;
+  --secondary: #FFFFFF;
+  --secondary-foreground: #111111;
+  --muted: #F3F3F3;
+  --muted-foreground: #52525B;
+  --accent: #F3F3F3;
+  --accent-foreground: #111111;
+  --destructive: #C10007;
+  --border: #E4E4E7;
+  --input: #E4E4E7;
+  --ring: #0A95FF;
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #111111;
+  --sidebar-primary: #F6821F;
+  --sidebar-primary-foreground: #111111;
+  --sidebar-accent: #F3F3F3;
+  --sidebar-accent-foreground: #111111;
+  --sidebar-border: #E4E4E7;
+  --sidebar-ring: #0A95FF;
+  --success: #058378;
+  --warning: #FFAC00;
+  --link: #1D4ED8;
+  --grid-line: #E4E4E7;
+  --scan-plane: rgba(246, 130, 31, 0.14);
 }
 
 @layer base {

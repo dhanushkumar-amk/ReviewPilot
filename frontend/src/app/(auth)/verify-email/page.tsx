@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { AlertCircleIcon, CheckCircle2Icon } from "lucide-react";
+import { AlertCircleIcon, ArrowRightIcon, CheckCircle2Icon } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,12 +22,14 @@ export default function VerifyEmailPage() {
   const isFailed = Boolean(error);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Email verification</CardTitle>
+    <Card className="shadow-xs sm:[--card-spacing:--spacing(6)]">
+      <CardHeader className="border-b">
+        <CardTitle className="text-xl font-semibold tracking-tight">
+          Email verification
+        </CardTitle>
         <CardDescription>
           {isFailed
-            ? "We could not verify your email address."
+            ? "We could not validate your verification link."
             : "Your email verification request is complete."}
         </CardDescription>
       </CardHeader>
@@ -47,7 +49,7 @@ export default function VerifyEmailPage() {
             <CheckCircle2Icon />
             <AlertTitle>Email verified</AlertTitle>
             <AlertDescription>
-              Your email address has been verified. You can now access your workspace.
+              Your email address has been verified. You can now access your ReviewPilot workspace.
             </AlertDescription>
           </Alert>
         )}
@@ -55,15 +57,35 @@ export default function VerifyEmailPage() {
 
       <CardFooter className="flex flex-col gap-2">
         {isFailed ? (
-          <Button variant="default" render={<Link href="/login" />} nativeButton={false} className="w-full">
+          <Button
+            variant="default"
+            size="lg"
+            render={<Link href="/login" />}
+            nativeButton={false}
+            className="w-full"
+          >
             <span>Go to sign in</span>
+            <ArrowRightIcon data-icon="inline-end" />
           </Button>
         ) : (
           <div className="flex w-full flex-col gap-2">
-            <Button variant="default" render={<Link href="/dashboard" />} nativeButton={false} className="w-full">
+            <Button
+              variant="default"
+              size="lg"
+              render={<Link href="/dashboard" />}
+              nativeButton={false}
+              className="w-full"
+            >
               <span>Continue to dashboard</span>
+              <ArrowRightIcon data-icon="inline-end" />
             </Button>
-            <Button variant="outline" render={<Link href="/login" />} nativeButton={false} className="w-full">
+            <Button
+              variant="outline"
+              size="lg"
+              render={<Link href="/login" />}
+              nativeButton={false}
+              className="w-full"
+            >
               <span>Sign in</span>
             </Button>
           </div>
@@ -72,4 +94,3 @@ export default function VerifyEmailPage() {
     </Card>
   );
 }
-

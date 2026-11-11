@@ -4,7 +4,13 @@ import * as React from "react";
 import Link from "next/link";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { AlertCircleIcon, CheckCircle2Icon } from "lucide-react";
+import {
+  AlertCircleIcon,
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  CheckCircle2Icon,
+  MailIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 import { FormField } from "@/components/auth/form-field";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -17,7 +23,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { FieldGroup } from "@/components/ui/field";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Spinner } from "@/components/ui/spinner";
 import { authClient } from "@/src/lib/auth-client";
 import { forgotPasswordSchema, type ForgotPasswordValues } from "@/src/lib/auth-schemas";
@@ -58,33 +65,35 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Forgot password</CardTitle>
+    <Card className="shadow-xs sm:[--card-spacing:--spacing(6)]">
+      <CardHeader className="border-b">
+        <CardTitle className="text-xl font-semibold tracking-tight">
+          Reset your password
+        </CardTitle>
         <CardDescription>
-          Enter your email address and we will send you a link to reset your password.
+          Enter your account email and we will send you a password reset link.
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="flex flex-col gap-4">
+      <CardContent className="flex flex-col gap-5">
         {submitted ? (
           <Alert>
             <CheckCircle2Icon />
             <AlertTitle>Check your email</AlertTitle>
-            <AlertDescription>
+            <AlertDescription className="flex flex-col gap-2">
               <p>
                 If an account exists for that email address, we have sent password reset
                 instructions.
               </p>
               {isDev ? (
-                <p className="mt-2 font-mono text-xs text-muted-foreground">
+                <p className="font-mono text-xs text-muted-foreground">
                   Development mode: check the backend terminal for the reset link.
                 </p>
               ) : null}
             </AlertDescription>
           </Alert>
         ) : (
-          <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
+          <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-5">
             {rateLimitError ? (
               <Alert variant="destructive">
                 <AlertCircleIcon />
@@ -93,34 +102,45 @@ export default function ForgotPasswordPage() {
               </Alert>
             ) : null}
 
-            <FormField id="forgot-email" label="Email" error={errors.email?.message}>
-              <Input
-                id="forgot-email"
-                type="email"
-                autoComplete="email"
-                autoFocus
-                placeholder="you@company.com"
-                disabled={isSubmitting}
-                aria-invalid={Boolean(errors.email)}
-                aria-describedby={errors.email ? "forgot-email-error" : undefined}
-                {...register("email")}
-              />
-            </FormField>
+            <FieldGroup>
+              <FormField id="forgot-email" label="Email" error={errors.email?.message}>
+                <InputGroup className="h-9" data-disabled={isSubmitting ? "true" : undefined}>
+                  <InputGroupAddon align="inline-start">
+                    <MailIcon />
+                  </InputGroupAddon>
+                  <InputGroupInput
+                    id="forgot-email"
+                    type="email"
+                    autoComplete="email"
+                    autoFocus
+                    placeholder="you@company.com"
+                    disabled={isSubmitting}
+                    aria-invalid={Boolean(errors.email)}
+                    aria-describedby={errors.email ? "forgot-email-error" : undefined}
+                    {...register("email")}
+                  />
+                </InputGroup>
+              </FormField>
+            </FieldGroup>
 
-            <Button type="submit" disabled={isSubmitting} className="w-full">
+            <Button type="submit" size="lg" disabled={isSubmitting} className="w-full">
               {isSubmitting ? <Spinner data-icon="inline-start" /> : null}
               <span>Send reset link</span>
+              {!isSubmitting ? <ArrowRightIcon data-icon="inline-end" /> : null}
             </Button>
           </form>
         )}
       </CardContent>
 
       <CardFooter className="justify-center">
-        <Link href="/login" className="text-xs font-medium text-foreground underline underline-offset-4">
-          Back to sign in
+        <Link
+          href="/login"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-link underline-offset-4 hover:underline"
+        >
+          <ArrowLeftIcon className="size-3.5 shrink-0" />
+          <span>Back to sign in</span>
         </Link>
       </CardFooter>
     </Card>
   );
 }
-

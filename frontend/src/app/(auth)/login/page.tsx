@@ -5,7 +5,13 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { AlertCircleIcon, MailCheckIcon } from "lucide-react";
+import {
+  AlertCircleIcon,
+  ArrowRightIcon,
+  LockIcon,
+  MailCheckIcon,
+  MailIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 import { FormField } from "@/components/auth/form-field";
 import { PasswordInput } from "@/components/auth/password-input";
@@ -19,7 +25,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { FieldGroup } from "@/components/ui/field";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Spinner } from "@/components/ui/spinner";
 import { authClient } from "@/src/lib/auth-client";
 import { loginSchema, type LoginValues } from "@/src/lib/auth-schemas";
@@ -110,13 +117,17 @@ export default function LoginPage() {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Sign in</CardTitle>
-        <CardDescription>Sign in to access your ReviewPilot workspace.</CardDescription>
+    <Card className="shadow-xs sm:[--card-spacing:--spacing(6)]">
+      <CardHeader className="border-b">
+        <CardTitle className="text-xl font-semibold tracking-tight">
+          Sign in to ReviewPilot
+        </CardTitle>
+        <CardDescription>
+          Enter your credentials to access your repositories and dashboard.
+        </CardDescription>
       </CardHeader>
 
-      <CardContent className="flex flex-col gap-4">
+      <CardContent className="flex flex-col gap-5">
         {serverError ? (
           <Alert variant="destructive">
             <AlertCircleIcon />
@@ -152,56 +163,69 @@ export default function LoginPage() {
           </Alert>
         ) : null}
 
-        <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
-          <FormField id="login-email" label="Email" error={errors.email?.message}>
-            <Input
-              id="login-email"
-              type="email"
-              autoComplete="email"
-              autoFocus
-              placeholder="you@company.com"
-              disabled={isSubmitting}
-              aria-invalid={Boolean(errors.email)}
-              aria-describedby={errors.email ? "login-email-error" : undefined}
-              {...register("email")}
-            />
-          </FormField>
+        <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-5">
+          <FieldGroup>
+            <FormField id="login-email" label="Email" error={errors.email?.message}>
+              <InputGroup className="h-9" data-disabled={isSubmitting ? "true" : undefined}>
+                <InputGroupAddon align="inline-start">
+                  <MailIcon />
+                </InputGroupAddon>
+                <InputGroupInput
+                  id="login-email"
+                  type="email"
+                  autoComplete="email"
+                  autoFocus
+                  placeholder="you@company.com"
+                  disabled={isSubmitting}
+                  aria-invalid={Boolean(errors.email)}
+                  aria-describedby={errors.email ? "login-email-error" : undefined}
+                  {...register("email")}
+                />
+              </InputGroup>
+            </FormField>
 
-          <FormField
-            id="login-password"
-            label="Password"
-            error={errors.password?.message}
-            labelRight={
-              <Link
-                href="/forgot-password"
-                className="text-xs font-medium text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
-              >
-                Forgot password?
-              </Link>
-            }
-          >
-            <PasswordInput
+            <FormField
               id="login-password"
-              autoComplete="current-password"
-              placeholder="Enter your password"
-              disabled={isSubmitting}
-              aria-invalid={Boolean(errors.password)}
-              aria-describedby={errors.password ? "login-password-error" : undefined}
-              {...register("password")}
-            />
-          </FormField>
+              label="Password"
+              error={errors.password?.message}
+              labelRight={
+                <Link
+                  href="/forgot-password"
+                  className="text-xs font-medium text-link underline-offset-4 hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              }
+            >
+              <PasswordInput
+                id="login-password"
+                groupClassName="h-9"
+                startIcon={<LockIcon />}
+                autoComplete="current-password"
+                placeholder="Enter your password"
+                disabled={isSubmitting}
+                aria-invalid={Boolean(errors.password)}
+                aria-describedby={errors.password ? "login-password-error" : undefined}
+                {...register("password")}
+              />
+            </FormField>
+          </FieldGroup>
 
-          <Button type="submit" disabled={isSubmitting} className="w-full">
+          <Button type="submit" size="lg" disabled={isSubmitting} className="w-full">
             {isSubmitting ? <Spinner data-icon="inline-start" /> : null}
             <span>Sign in</span>
+            {!isSubmitting ? <ArrowRightIcon data-icon="inline-end" /> : null}
           </Button>
         </form>
       </CardContent>
 
       <CardFooter className="justify-center">
         <p className="text-xs text-muted-foreground">
-          Need an account?{" "}
-          <Link href="/sign-up" className="font-medium text-foreground underline underline-offset-4">
+          New to ReviewPilot?{" "}
+          <Link
+            href="/sign-up"
+            className="font-medium text-link underline-offset-4 hover:underline"
+          >
             Sign up
           </Link>
         </p>
@@ -209,4 +233,3 @@ export default function LoginPage() {
     </Card>
   );
 }
-
