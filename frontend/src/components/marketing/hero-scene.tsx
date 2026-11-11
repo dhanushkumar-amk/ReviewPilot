@@ -34,6 +34,26 @@ function SceneContent({ replayKey }: { replayKey?: number }) {
   const [activeIssues, setActiveIssues] = React.useState<boolean[]>([false, false, false]);
   const [showDiff, setShowDiff] = React.useState(false);
   const [showPR, setShowPR] = React.useState(false);
+  const [isDark, setIsDark] = React.useState(false);
+
+  React.useEffect(() => {
+    const checkDark = () => {
+      setIsDark(document.documentElement.classList.contains("dark"));
+    };
+    checkDark();
+
+    const observer = new MutationObserver(checkDark);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
+  const cardColor = isDark ? "#121316" : "#FFFFFF";
+  const borderColor = isDark ? "#222328" : "#E4E4E7";
+  const neutralLineColor = isDark ? "#222328" : "#E4E4E7";
 
   // Mouse tilt tracking
   const pointer = React.useRef({ x: 0, y: 0, targetX: 0, targetY: 0 });
@@ -180,13 +200,13 @@ function SceneContent({ replayKey }: { replayKey?: number }) {
             {/* Base Card Surface */}
             <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
               <planeGeometry args={[3.2, 2.0]} />
-              <meshBasicMaterial color="#FFFFFF" />
+              <meshBasicMaterial color={cardColor} />
             </mesh>
 
             {/* Hairline Border Outline */}
             <lineSegments position={[0, 0.002, 0]} rotation={[-Math.PI / 2, 0, 0]}>
               <edgesGeometry args={[new THREE.PlaneGeometry(3.2, 2.0)]} />
-              <lineBasicMaterial color="#E4E4E7" linewidth={1} />
+              <lineBasicMaterial color={borderColor} linewidth={1} />
             </lineSegments>
 
             {/* Header file path label in DOM */}
@@ -197,7 +217,7 @@ function SceneContent({ replayKey }: { replayKey?: number }) {
               occlude="blending"
               scale={0.12}
             >
-              <div className="font-mono text-[9px] text-[#52525B] font-medium tracking-tight whitespace-nowrap pointer-events-none select-none">
+              <div className="font-mono text-[9px] text-muted-foreground font-medium tracking-tight whitespace-nowrap pointer-events-none select-none">
                 {file.name}
               </div>
             </Html>
@@ -209,7 +229,7 @@ function SceneContent({ replayKey }: { replayKey?: number }) {
               const issueIndex =
                 file.name.includes("preview") ? 0 : file.name.includes("webhook") ? 1 : 2;
               const isFlagActive = isFlagged && activeIssues[issueIndex];
-              const lineColor = isFlagActive ? file.color || "#C10007" : "#E4E4E7";
+              const lineColor = isFlagActive ? file.color || "#C10007" : neutralLineColor;
 
               return (
                 <mesh
@@ -242,7 +262,7 @@ function SceneContent({ replayKey }: { replayKey?: number }) {
                     : "opacity-0 -translate-x-2"
                 )}
               >
-                <div className="flex items-center gap-1.5 rounded border border-border bg-card px-2 py-0.5 font-mono text-[10px] font-semibold text-[#111111] shadow-xs whitespace-nowrap">
+                <div className="flex items-center gap-1.5 rounded border border-border bg-card px-2 py-0.5 font-mono text-[10px] font-semibold text-foreground shadow-xs whitespace-nowrap">
                   <span
                     className="size-1.5 rounded-full shrink-0"
                     style={{ backgroundColor: file.color || "#C10007" }}

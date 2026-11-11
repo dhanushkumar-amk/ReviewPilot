@@ -6,7 +6,6 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { cn } from "@/lib/utils";
 import {
   GitCommitIcon,
-  ShieldAlertIcon,
   CheckCircle2Icon,
   FileCodeIcon,
   FolderIcon,

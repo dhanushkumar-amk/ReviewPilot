@@ -17,7 +17,6 @@ import {
   Tooltip as RechartsTooltip,
 } from "recharts";
 import {
-  CheckCircle2Icon,
   FolderIcon,
   FileCodeIcon,
 } from "lucide-react";
@@ -66,17 +65,6 @@ const SAMPLE_FINDINGS: FindingRowData[] = [
     severity: "Medium",
     status: "In progress",
   },
-];
-
-// Sample chart telemetry data
-const SCAN_TIME_DATA = [
-  { push: "p1", ms: 420 },
-  { push: "p2", ms: 380 },
-  { push: "p3", ms: 510 },
-  { push: "p4", ms: 320 },
-  { push: "p5", ms: 290 },
-  { push: "p6", ms: 340 },
-  { push: "p7", ms: 310 },
 ];
 
 const SEVERITY_CHART_DATA = [
@@ -255,15 +243,15 @@ export function MarketingBento() {
             <div className="w-full h-28 pt-2">
               <svg viewBox="0 0 340 100" className="w-full h-full overflow-visible">
                 {/* Reference Grid lines */}
-                <line x1="0" y1="20" x2="340" y2="20" stroke="#E4E4E7" strokeWidth="1" strokeDasharray="3 3" />
-                <line x1="0" y1="50" x2="340" y2="50" stroke="#E4E4E7" strokeWidth="1" strokeDasharray="3 3" />
-                <line x1="0" y1="80" x2="340" y2="80" stroke="#E4E4E7" strokeWidth="1" strokeDasharray="3 3" />
+                <line x1="0" y1="20" x2="340" y2="20" stroke="var(--border)" strokeWidth="1" strokeDasharray="3 3" />
+                <line x1="0" y1="50" x2="340" y2="50" stroke="var(--border)" strokeWidth="1" strokeDasharray="3 3" />
+                <line x1="0" y1="80" x2="340" y2="80" stroke="var(--border)" strokeWidth="1" strokeDasharray="3 3" />
 
                 {/* Animated Trend Line */}
                 <path
                   d="M 10 50 L 60 40 L 115 65 L 170 30 L 225 25 L 280 35 L 330 30"
                   fill="none"
-                  stroke="#111111"
+                  stroke="var(--foreground)"
                   strokeWidth="2"
                   className={cn(
                     "transition-all duration-700 ease-out",
@@ -290,8 +278,8 @@ export function MarketingBento() {
                     cx={cx}
                     cy={cy}
                     r="3"
-                    fill="#FFFFFF"
-                    stroke="#111111"
+                    fill="var(--card)"
+                    stroke="var(--foreground)"
                     strokeWidth="1.5"
                   />
                 ))}
@@ -319,8 +307,8 @@ export function MarketingBento() {
             <div className="w-full h-28" aria-hidden="true">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={SEVERITY_CHART_DATA} margin={{ top: 8, right: 8, left: -24, bottom: 0 }}>
-                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#52525B" }} axisLine={{ stroke: "#E4E4E7" }} tickLine={false} />
-                  <YAxis tick={{ fontSize: 10, fill: "#52525B" }} axisLine={false} tickLine={false} />
+                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} axisLine={{ stroke: "var(--border)" }} tickLine={false} />
+                  <YAxis tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} />
                   <RechartsTooltip
                     cursor={{ fill: "transparent" }}
                     content={({ active, payload }) => {

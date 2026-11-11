@@ -3,6 +3,8 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -88,6 +90,46 @@
   --link: #1D4ED8;
   --grid-line: #E4E4E7;
   --scan-plane: rgba(246, 130, 31, 0.14);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+}
+
+.dark {
+  --radius: 0.5rem;
+  --background: #090A0C;
+  --foreground: #EDEDED;
+  --card: #111215;
+  --card-foreground: #EDEDED;
+  --popover: #111215;
+  --popover-foreground: #EDEDED;
+  --primary: #F6821F;
+  --primary-foreground: #111111;
+  --secondary: #18191E;
+  --secondary-foreground: #EDEDED;
+  --muted: #18191E;
+  --muted-foreground: #A1A1AA;
+  --accent: #1C1D22;
+  --accent-foreground: #EDEDED;
+  --destructive: #F87171;
+  --border: #222328;
+  --input: #222328;
+  --ring: #F6821F;
+  --sidebar: #0C0D10;
+  --sidebar-foreground: #EDEDED;
+  --sidebar-primary: #F6821F;
+  --sidebar-primary-foreground: #111111;
+  --sidebar-accent: #16171B;
+  --sidebar-accent-foreground: #EDEDED;
+  --sidebar-border: #1E1F24;
+  --sidebar-ring: #F6821F;
+  --success: #10B981;
+  --warning: #F59E0B;
+  --link: #60A5FA;
+  --grid-line: #1E1F24;
+  --scan-plane: rgba(246, 130, 31, 0.22);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);

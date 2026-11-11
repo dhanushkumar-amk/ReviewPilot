@@ -125,7 +125,7 @@ export function MarketingSecurityTimeline() {
                   y1="10"
                   x2="12"
                   y2="370"
-                  stroke="#E4E4E7"
+                  stroke="var(--border)"
                   strokeWidth="2"
                 />
                 {/* Animated Drawing Path */}
@@ -135,7 +135,7 @@ export function MarketingSecurityTimeline() {
                   y1="10"
                   x2="12"
                   y2="370"
-                  stroke="#111111"
+                  stroke="var(--foreground)"
                   strokeWidth="2"
                 />
 
@@ -146,8 +146,8 @@ export function MarketingSecurityTimeline() {
                     cx="12"
                     cy={cy}
                     r="5"
-                    fill={i <= activeNodeIndex ? "#111111" : "#FFFFFF"}
-                    stroke={i <= activeNodeIndex ? "#111111" : "#E4E4E7"}
+                    fill={i <= activeNodeIndex ? "var(--foreground)" : "var(--card)"}
+                    stroke={i <= activeNodeIndex ? "var(--foreground)" : "var(--border)"}
                     strokeWidth="2"
                     className="transition-colors duration-200"
                   />

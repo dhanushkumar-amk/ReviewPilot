@@ -35,7 +35,9 @@ import {
   PlusIcon,
   HelpCircleIcon,
   BellIcon,
+  UsersIcon,
 } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const routeNames: Record<string, string> = {
   "/dashboard": "Overview",
@@ -44,6 +46,7 @@ const routeNames: Record<string, string> = {
   "/scans": "Scans",
   "/rules": "Rules",
   "/pull-requests": "Pull requests",
+  "/team": "Team",
   "/settings": "Settings",
   "/billing": "Billing",
   "/docs": "Documentation",
@@ -91,6 +94,27 @@ export function TopBar() {
           <PlusIcon data-icon="inline-start" />
           <span>Add repository</span>
         </Button>
+
+        {/* Team button */}
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon"
+                render={<Link href="/team" />}
+                nativeButton={false}
+                aria-label="Team members and seats"
+              />
+            }
+          >
+            <UsersIcon />
+          </TooltipTrigger>
+          <TooltipContent>Team</TooltipContent>
+        </Tooltip>
+
+        {/* Theme toggle (Light / Dark / System) */}
+        <ThemeToggle />
 
         {/* Help icon button linking to /docs */}
         <Tooltip>
@@ -147,6 +171,13 @@ export function TopBar() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuGroup>
+              <DropdownMenuItem
+                render={<Link href="/team" />}
+                className="cursor-pointer"
+              >
+                <UsersIcon data-icon="inline-start" />
+                <span>Team</span>
+              </DropdownMenuItem>
               <DropdownMenuItem
                 render={<Link href="/settings" />}
                 className="cursor-pointer"

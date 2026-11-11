@@ -11,6 +11,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { MenuIcon } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 
 // GitHub mark inline SVG
@@ -109,6 +110,7 @@ export function MarketingNav() {
 
           {/* Action Buttons */}
           <div className="hidden sm:flex items-center gap-2.5">
+            <ThemeToggle />
             <Button
               variant="outline"
               size="sm"
@@ -174,6 +176,10 @@ export function MarketingNav() {
                 </nav>
 
                 <div className="flex flex-col gap-2 mt-auto pt-4 border-t border-border">
+                  <div className="flex items-center justify-between pb-1 text-xs text-muted-foreground">
+                    <span>Theme</span>
+                    <ThemeToggle />
+                  </div>
                   <Button
                     variant="outline"
                     size="sm"

@@ -39,6 +39,7 @@ import {
   ChevronsUpDownIcon,
   SearchIcon,
   CheckIcon,
+  UsersIcon,
 } from "lucide-react";
 
 interface NavItem {
@@ -78,6 +79,11 @@ const platformItems: NavItem[] = [
 ];
 
 const accountItems: NavItem[] = [
+  {
+    title: "Team",
+    href: "/team",
+    icon: UsersIcon,
+  },
   {
     title: "Settings",
     href: "/settings",
@@ -139,6 +145,16 @@ export function AppSidebar() {
                   {workspace === "ReviewPilot Staging" && (
                     <CheckIcon data-icon="inline-end" />
                   )}
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+              <div className="h-px bg-border my-1" />
+              <DropdownMenuGroup>
+                <DropdownMenuItem
+                  render={<Link href="/team" />}
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <UsersIcon className="size-4" />
+                  <span>Manage team</span>
                 </DropdownMenuItem>
               </DropdownMenuGroup>
             </DropdownMenuContent>

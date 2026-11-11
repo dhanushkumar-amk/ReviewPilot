@@ -197,6 +197,7 @@ function StatusIndicator({ status }: { status: FindingStatus }) {
 type SortingState = Array<{ id: string; desc: boolean }>;
 type VisibilityState = Record<string, boolean>;
 type RowSelectionState = Record<string, true>;
+type TableUpdater<T> = T | ((old: T) => T);
 
 const pageSizeItems = [
   { label: "10", value: 10 },
@@ -330,7 +331,7 @@ function FindingsContent() {
     });
   };
 
-  const columns = React.useMemo<ColumnDef<Finding, any>[]>(
+  const columns = React.useMemo<ColumnDef<Finding, unknown>[]>(
     () => [
       {
         id: "select",
@@ -545,20 +546,22 @@ function FindingsContent() {
       rowSelection,
       pagination,
     },
-    onSortingChange: (updater: any) => {
+    onSortingChange: (updater: TableUpdater<SortingState>) => {
       setSorting(typeof updater === "function" ? updater(sorting) : updater);
     },
-    onColumnVisibilityChange: (updater: any) => {
+    onColumnVisibilityChange: (updater: TableUpdater<VisibilityState>) => {
       setColumnVisibility(
         typeof updater === "function" ? updater(columnVisibility) : updater
       );
     },
-    onRowSelectionChange: (updater: any) => {
+    onRowSelectionChange: (updater: TableUpdater<RowSelectionState>) => {
       setRowSelection(
         typeof updater === "function" ? updater(rowSelection) : updater
       );
     },
-    onPaginationChange: (updater: any) => {
+    onPaginationChange: (
+      updater: TableUpdater<{ pageIndex: number; pageSize: number }>
+    ) => {
       setPagination(
         typeof updater === "function" ? updater(pagination) : updater
       );
