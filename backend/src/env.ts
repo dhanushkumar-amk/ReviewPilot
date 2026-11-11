@@ -13,6 +13,8 @@ const envSchema = z
     INNGEST_DEV: z.literal("1").optional(),
     INNGEST_EVENT_KEY: z.string().trim().min(1).optional(),
     INNGEST_SIGNING_KEY: z.string().trim().min(1).optional(),
+    BETTER_AUTH_SECRET: z.string().trim().min(32),
+    BETTER_AUTH_URL: z.url(),
   })
   .superRefine((data, ctx) => {
     if (data.NODE_ENV !== "test") {

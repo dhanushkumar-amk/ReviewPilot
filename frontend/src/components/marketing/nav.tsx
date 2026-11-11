@@ -114,7 +114,7 @@ export function MarketingNav() {
             <Button
               variant="outline"
               size="sm"
-              render={<Link href="/dashboard" />}
+              render={<Link href="/login" />}
               nativeButton={false}
               className="text-xs"
             >
@@ -123,7 +123,7 @@ export function MarketingNav() {
             <Button
               variant="default"
               size="sm"
-              render={<Link href="/findings" />}
+              render={<Link href="/sign-up" />}
               nativeButton={false}
               className="text-xs font-medium"
             >
@@ -137,7 +137,7 @@ export function MarketingNav() {
             <Button
               variant="default"
               size="xs"
-              render={<Link href="/findings" />}
+              render={<Link href="/sign-up" />}
               nativeButton={false}
               className="sm:hidden text-xs"
             >
@@ -183,7 +183,7 @@ export function MarketingNav() {
                   <Button
                     variant="outline"
                     size="sm"
-                    render={<Link href="/dashboard" />}
+                    render={<Link href="/login" />}
                     nativeButton={false}
                     className="w-full text-xs"
                   >
@@ -192,7 +192,7 @@ export function MarketingNav() {
                   <Button
                     variant="default"
                     size="sm"
-                    render={<Link href="/findings" />}
+                    render={<Link href="/sign-up" />}
                     nativeButton={false}
                     className="w-full text-xs"
                   >

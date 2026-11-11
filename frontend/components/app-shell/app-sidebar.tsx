@@ -26,6 +26,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import {
+  getUserInitials,
+  useInitialAuthUser,
+} from "@/components/auth/auth-user-provider";
+import { authClient } from "@/src/lib/auth-client";
 import { CommandPalette } from "./command-palette";
 import { cn } from "cn";
 import {
@@ -98,6 +103,12 @@ const accountItems: NavItem[] = [
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const { data: session } = authClient.useSession();
+  const initialUser = useInitialAuthUser();
+  const currentUser = session?.user ?? initialUser;
+  const displayName = currentUser?.name ?? "User";
+  const displayEmail = currentUser?.email ?? "";
+  const initials = getUserInitials(displayName, displayEmail);
   const [commandOpen, setCommandOpen] = React.useState(false);
   const [workspace, setWorkspace] = React.useState("ReviewPilot Production");
 
@@ -306,14 +317,14 @@ export function AppSidebar() {
           <div className="flex items-center justify-between gap-2 group-data-[collapsible=icon]:justify-center">
             <div className="flex items-center gap-2.5 min-w-0 group-data-[collapsible=icon]:hidden">
               <Avatar className="size-8 shrink-0">
-                <AvatarFallback>AR</AvatarFallback>
+                <AvatarFallback>{initials}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col min-w-0 leading-tight">
                 <span className="text-xs font-semibold text-sidebar-foreground truncate">
-                  Alex Rivera
+                  {displayName}
                 </span>
                 <span className="text-[11px] text-muted-foreground truncate">
-                  alex@reviewpilot.io
+                  {displayEmail}
                 </span>
               </div>
             </div>

@@ -143,7 +143,7 @@ export function MarketingHero() {
               <Button
                 variant="default"
                 size="lg"
-                render={<Link href="/findings" />}
+                render={<Link href="/sign-up" />}
                 nativeButton={false}
                 className="h-11 px-5 text-sm font-semibold justify-center cursor-pointer"
               >

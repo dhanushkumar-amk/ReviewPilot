@@ -170,7 +170,7 @@ export function MarketingPricing() {
                 <Button
                   variant={isPremium ? "default" : "outline"}
                   size="default"
-                  render={<Link href="/findings" />}
+                  render={<Link href="/sign-up" />}
                   nativeButton={false}
                   className="w-full text-xs font-semibold justify-center mt-2"
                 >

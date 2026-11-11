@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -38,6 +39,11 @@ import {
   UsersIcon,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import {
+  getUserInitials,
+  useInitialAuthUser,
+} from "@/components/auth/auth-user-provider";
+import { authClient } from "@/src/lib/auth-client";
 
 const routeNames: Record<string, string> = {
   "/dashboard": "Overview",
@@ -55,7 +61,34 @@ const routeNames: Record<string, string> = {
 
 export function TopBar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { data: session } = authClient.useSession();
+  const initialUser = useInitialAuthUser();
+  const currentUser = session?.user ?? initialUser;
+  const displayName = currentUser?.name ?? "User";
+  const displayEmail = currentUser?.email ?? "";
+  const initials = getUserInitials(displayName, displayEmail);
+  const [signingOut, setSigningOut] = React.useState(false);
   const currentTitle = routeNames[pathname] ?? "Overview";
+
+  const handleSignOut = async () => {
+    if (signingOut) {
+      return;
+    }
+
+    setSigningOut(true);
+    try {
+      const { error } = await authClient.signOut();
+      if (error) {
+        toast.error(error.message || "Unable to sign out right now.");
+        return;
+      }
+      router.replace("/login");
+      router.refresh();
+    } finally {
+      setSigningOut(false);
+    }
+  };
 
   return (
     <header className="flex h-14 w-full items-center justify-between border-b border-border bg-card px-4 sm:px-6 shrink-0">
@@ -162,14 +195,21 @@ export function TopBar() {
             aria-label="Open user profile menu"
           >
             <Avatar className="size-6 shrink-0">
-              <AvatarFallback>AR</AvatarFallback>
+              <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
             <span className="hidden sm:inline font-medium text-foreground">
-              Alex Rivera
+              {displayName}
             </span>
             <ChevronDownIcon className="size-3 text-muted-foreground" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuContent align="end" className="w-56">
+            <div className="px-2 py-1.5 text-xs leading-tight">
+              <p className="font-semibold text-foreground truncate">{displayName}</p>
+              {displayEmail ? (
+                <p className="text-[11px] text-muted-foreground truncate">{displayEmail}</p>
+              ) : null}
+            </div>
+            <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem
                 render={<Link href="/team" />}
@@ -195,9 +235,14 @@ export function TopBar() {
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem variant="destructive" className="cursor-pointer">
+              <DropdownMenuItem
+                variant="destructive"
+                className="cursor-pointer"
+                disabled={signingOut}
+                onClick={handleSignOut}
+              >
                 <LogOutIcon data-icon="inline-start" />
-                <span>Sign out</span>
+                <span>{signingOut ? "Signing out..." : "Sign out"}</span>
               </DropdownMenuItem>
             </DropdownMenuGroup>
           </DropdownMenuContent>

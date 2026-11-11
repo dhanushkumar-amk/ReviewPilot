@@ -9,6 +9,8 @@ import { inngest } from "./inngest/client.js";
 import { functions } from "./inngest/index.js";
 import { devRoutes } from "./routes/dev.js";
 import { healthRoutes } from "./routes/health.js";
+import { authRoutes } from "./routes/auth.js";
+import { meRoutes } from "./routes/me.js";
 
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9._-]{1,128}$/;
 
@@ -44,7 +46,12 @@ export async function buildApp(): Promise<FastifyInstance> {
     },
     logger: {
       level: env.NODE_ENV === "test" ? "silent" : "info",
-      redact: ["req.headers.authorization", "req.headers.cookie"],
+      redact: [
+        "req.headers.authorization",
+        "req.headers.cookie",
+        'res.headers["set-cookie"]',
+        "set-cookie",
+      ],
       ...(transport ? { transport } : {}),
     },
   });
@@ -96,6 +103,8 @@ export async function buildApp(): Promise<FastifyInstance> {
   });
 
   await app.register(healthRoutes);
+  await app.register(authRoutes);
+  await app.register(meRoutes);
 
   await app.register(async (inngestScope) => {
     inngestScope.addHook("onRoute", (routeOptions) => {

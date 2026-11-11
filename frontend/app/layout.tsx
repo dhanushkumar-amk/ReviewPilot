@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { ToastProvider, ToastPortal, ToastViewport } from "@/components/ui/toast";
+import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Providers } from "@/components/providers";
 import "./globals.css";
@@ -52,6 +53,7 @@ export default function RootLayout({
                 <ToastViewport />
               </ToastPortal>
             </ToastProvider>
+            <Toaster />
           </Providers>
         </ThemeProvider>
       </body>
