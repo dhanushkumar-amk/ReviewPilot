@@ -3,11 +3,14 @@ import { env } from "./env.js";
 import { PrismaClient } from "./generated/prisma/client.js";
 
 const DB_CHECK_TIMEOUT_MS = 5000;
+const DB_POOL_CONNECTION_TIMEOUT_MS = 15_000;
 
 const adapter = new PrismaPg(
   {
     connectionString: env.DATABASE_URL,
-    connectionTimeoutMillis: DB_CHECK_TIMEOUT_MS,
+    connectionTimeoutMillis: DB_POOL_CONNECTION_TIMEOUT_MS,
+    idleTimeoutMillis: 30_000,
+    keepAlive: true,
   },
   {
     onPoolError: () => {

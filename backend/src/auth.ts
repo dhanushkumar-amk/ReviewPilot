@@ -16,11 +16,72 @@ function assertEmailProviderConfigured(): void {
 
 assertEmailProviderConfigured();
 
+const SENSITIVE_LOG_KEYS = new Set([
+  "code",
+  "state",
+  "access_token",
+  "refresh_token",
+  "id_token",
+  "accessToken",
+  "refreshToken",
+  "idToken",
+  "clientSecret",
+  "client_secret",
+]);
+
+function sanitizeAuthLogArg(value: unknown, depth = 0): unknown {
+  if (depth > 4 || value === null || value === undefined) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    return value.replace(
+      /([?&](?:code|state|access_token|refresh_token|id_token)=)[^&\s]+/gi,
+      "$1[REDACTED]"
+    );
+  }
+
+  if (value instanceof Error) {
+    const record = value as Error & Record<string, unknown>;
+    return {
+      name: value.name,
+      message: sanitizeAuthLogArg(value.message, depth + 1),
+      ...(typeof record.code === "string" ? { code: record.code } : {}),
+      ...(record.details !== undefined
+        ? { details: sanitizeAuthLogArg(record.details, depth + 1) }
+        : {}),
+    };
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeAuthLogArg(item, depth + 1));
+  }
+
+  if (typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
+      out[key] = SENSITIVE_LOG_KEYS.has(key)
+        ? "[REDACTED]"
+        : sanitizeAuthLogArg(entry, depth + 1);
+    }
+    return out;
+  }
+
+  return value;
+}
+
 export const auth = betterAuth({
   appName: "ReviewPilot",
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL,
   trustedOrigins: [env.WEB_ORIGIN],
+  logger: {
+    log: (level, message, ...args) => {
+      const safeMessage = sanitizeAuthLogArg(message);
+      const safeArgs = args.map((arg) => sanitizeAuthLogArg(arg));
+      console[level](`[Better Auth] ${String(safeMessage)}`, ...safeArgs);
+    },
+  },
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
@@ -62,6 +123,7 @@ export const auth = betterAuth({
           google: {
             clientId: env.GOOGLE_CLIENT_ID!,
             clientSecret: env.GOOGLE_CLIENT_SECRET!,
+            disableDefaultScope: true,
             scope: ["openid", "email", "profile"],
           },
         }
@@ -71,6 +133,7 @@ export const auth = betterAuth({
           github: {
             clientId: env.GITHUB_CLIENT_ID!,
             clientSecret: env.GITHUB_CLIENT_SECRET!,
+            disableDefaultScope: true,
             scope: ["read:user", "user:email"],
           },
         }
