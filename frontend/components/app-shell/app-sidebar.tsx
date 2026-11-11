@@ -23,6 +23,7 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -32,12 +33,13 @@ import {
 } from "@/components/auth/auth-user-provider";
 import { authClient } from "@/src/lib/auth-client";
 import { CommandPalette } from "./command-palette";
-import { cn } from "cn";
+import { cn } from "@/lib/utils";
 import {
   LayoutDashboardIcon,
   FolderCodeIcon,
   ScanLineIcon,
   ShieldAlertIcon,
+  ShieldCheckIcon,
   GitPullRequestIcon,
   SettingsIcon,
   CreditCardIcon,
@@ -81,6 +83,11 @@ const platformItems: NavItem[] = [
     icon: GitPullRequestIcon,
     badge: "New",
   },
+  {
+    title: "Rules",
+    href: "/rules",
+    icon: ShieldCheckIcon,
+  },
 ];
 
 const accountItems: NavItem[] = [
@@ -123,7 +130,7 @@ export function AppSidebar() {
               aria-label="Switch workspace"
             >
               <div className="flex items-center gap-2 truncate">
-                <div className="size-6 shrink-0 rounded-md bg-foreground text-background flex items-center justify-center font-mono text-[11px] font-bold tracking-tight shadow-xs">
+                <div className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground font-mono text-[11px] font-bold tracking-tight">
                   RP
                 </div>
                 <div className="flex flex-col truncate leading-tight group-data-[collapsible=icon]:hidden">
@@ -158,13 +165,13 @@ export function AppSidebar() {
                   )}
                 </DropdownMenuItem>
               </DropdownMenuGroup>
-              <div className="h-px bg-border my-1" />
+              <DropdownMenuSeparator />
               <DropdownMenuGroup>
                 <DropdownMenuItem
                   render={<Link href="/team" />}
-                  className="flex items-center gap-2 cursor-pointer"
+                  className="cursor-pointer"
                 >
-                  <UsersIcon className="size-4" />
+                  <UsersIcon />
                   <span>Manage team</span>
                 </DropdownMenuItem>
               </DropdownMenuGroup>

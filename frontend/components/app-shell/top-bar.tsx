@@ -18,9 +18,20 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import {
+  Popover,
+  PopoverContent,
+  PopoverDescription,
+  PopoverHeader,
+  PopoverTitle,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,6 +48,7 @@ import {
   HelpCircleIcon,
   BellIcon,
   UsersIcon,
+  CheckCheckIcon,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
@@ -59,6 +71,30 @@ const routeNames: Record<string, string> = {
   "/support": "Support",
 };
 
+const notificationsList = [
+  {
+    id: "n-1",
+    title: "Critical SQL injection flagged",
+    detail: "reviewpilot/core · PR #482 · 4m ago",
+    href: "/findings?severity=Critical",
+    unread: true,
+  },
+  {
+    id: "n-2",
+    title: "Scan #8942 completed cleanly",
+    detail: "reviewpilot/web · 0 critical issues · 26m ago",
+    href: "/scans",
+    unread: true,
+  },
+  {
+    id: "n-3",
+    title: "Rule set CWE-347 updated",
+    detail: "JWT strict algorithm enforcement enabled · 2h ago",
+    href: "/rules",
+    unread: false,
+  },
+];
+
 export function TopBar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -69,7 +105,11 @@ export function TopBar() {
   const displayEmail = currentUser?.email ?? "";
   const initials = getUserInitials(displayName, displayEmail);
   const [signingOut, setSigningOut] = React.useState(false);
+  const [readIds, setReadIds] = React.useState<string[]>([]);
   const currentTitle = routeNames[pathname] ?? "Overview";
+  const unreadCount = notificationsList.filter(
+    (item) => item.unread && !readIds.includes(item.id)
+  ).length;
 
   const handleSignOut = async () => {
     if (signingOut) {
@@ -167,26 +207,87 @@ export function TopBar() {
           <TooltipContent>Documentation & help</TooltipContent>
         </Tooltip>
 
-        {/* Notification bell with static unread dot */}
-        <Tooltip>
-          <TooltipTrigger
+        {/* Interactive Notification Feed */}
+        <Popover>
+          <PopoverTrigger
             render={
               <Button
                 variant="ghost"
                 size="icon"
-                aria-label="Notifications (1 unread)"
+                aria-label={
+                  unreadCount > 0
+                    ? `Notifications (${unreadCount} unread)`
+                    : "Notifications"
+                }
                 className="relative"
               />
             }
           >
             <BellIcon />
-            <span
-              className="absolute top-2 right-2 size-2 rounded-full bg-destructive"
-              aria-hidden="true"
-            />
-          </TooltipTrigger>
-          <TooltipContent>Notifications</TooltipContent>
-        </Tooltip>
+            {unreadCount > 0 ? (
+              <span
+                className="absolute top-2 right-2 size-2 rounded-full bg-primary"
+                aria-hidden="true"
+              />
+            ) : null}
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-80 p-0">
+            <PopoverHeader className="flex flex-row items-center justify-between gap-2 p-3">
+              <div className="flex items-center gap-2">
+                <PopoverTitle>Notifications</PopoverTitle>
+                {unreadCount > 0 ? (
+                  <Badge variant="secondary">{unreadCount} new</Badge>
+                ) : null}
+              </div>
+              {unreadCount > 0 ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="xs"
+                  onClick={() =>
+                    setReadIds(notificationsList.map((item) => item.id))
+                  }
+                >
+                  <CheckCheckIcon data-icon="inline-start" />
+                  Mark read
+                </Button>
+              ) : null}
+            </PopoverHeader>
+            <Separator />
+            <div className="flex flex-col divide-y divide-border">
+              {notificationsList.map((item) => {
+                const isUnread = item.unread && !readIds.includes(item.id);
+                return (
+                  <Link
+                    key={item.id}
+                    href={item.href}
+                    onClick={() =>
+                      setReadIds((prev) =>
+                        prev.includes(item.id) ? prev : [...prev, item.id]
+                      )
+                    }
+                    className="flex items-start gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-muted"
+                  >
+                    <span
+                      className={`mt-1.5 size-2 shrink-0 rounded-full ${
+                        isUnread ? "bg-primary" : "bg-muted-foreground/30"
+                      }`}
+                      aria-hidden="true"
+                    />
+                    <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                      <span className="truncate text-xs font-medium text-foreground">
+                        {item.title}
+                      </span>
+                      <PopoverDescription className="truncate text-xs">
+                        {item.detail}
+                      </PopoverDescription>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </PopoverContent>
+        </Popover>
 
         {/* User profile dropdown menu */}
         <DropdownMenu>
@@ -203,12 +304,18 @@ export function TopBar() {
             <ChevronDownIcon className="size-3 text-muted-foreground" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
-            <div className="px-2 py-1.5 text-xs leading-tight">
-              <p className="font-semibold text-foreground truncate">{displayName}</p>
-              {displayEmail ? (
-                <p className="text-[11px] text-muted-foreground truncate">{displayEmail}</p>
-              ) : null}
-            </div>
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="flex flex-col gap-0.5 font-normal">
+                <span className="truncate font-semibold text-foreground">
+                  {displayName}
+                </span>
+                {displayEmail ? (
+                  <span className="truncate text-xs text-muted-foreground">
+                    {displayEmail}
+                  </span>
+                ) : null}
+              </DropdownMenuLabel>
+            </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem

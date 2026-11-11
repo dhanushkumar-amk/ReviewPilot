@@ -10,8 +10,10 @@ import {
   type LegacyColumnDef as ColumnDef,
 } from "@tanstack/react-table/legacy";
 import { flexRender } from "@tanstack/react-table";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/app-shell/page-header";
 import { EmptyState } from "@/components/app-shell/empty-state";
+import { StatCard } from "@/components/app-shell/stat-card";
 import { MarkdownView } from "@/components/markdown-view";
 import {
   Card,
@@ -23,7 +25,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import {
   Table,
   TableHeader,
@@ -95,55 +101,17 @@ import {
   XCircleIcon,
 } from "lucide-react";
 
-// Severity Badge with uniform size, shape, and semantic opacity tokens
+// Severity Badge using semantic Badge variants
 function SeverityBadge({ severity }: { severity: Severity }) {
-  const baseClasses =
-    "inline-flex items-center justify-center rounded-md px-2 py-0.5 text-xs font-medium min-w-[64px] border";
   switch (severity) {
     case "Critical":
-      return (
-        <span
-          className={cn(
-            baseClasses,
-            "border-destructive/20 bg-destructive/15 text-destructive"
-          )}
-        >
-          Critical
-        </span>
-      );
+      return <Badge variant="destructive">Critical</Badge>;
     case "High":
-      return (
-        <span
-          className={cn(
-            baseClasses,
-            "border-warning/20 bg-warning/15 text-warning"
-          )}
-        >
-          High
-        </span>
-      );
+      return <Badge variant="destructive">High</Badge>;
     case "Medium":
-      return (
-        <span
-          className={cn(
-            baseClasses,
-            "border-border bg-muted text-muted-foreground"
-          )}
-        >
-          Medium
-        </span>
-      );
+      return <Badge variant="default">Medium</Badge>;
     case "Low":
-      return (
-        <span
-          className={cn(
-            baseClasses,
-            "border-border bg-transparent text-muted-foreground"
-          )}
-        >
-          Low
-        </span>
-      );
+      return <Badge variant="secondary">Low</Badge>;
   }
 }
 
@@ -240,22 +208,38 @@ function FindingsContent() {
     pageSize: 10,
   });
 
-  // Detail Sheet state
+  // Detail Sheet state & interactive findings dataset
+  const [findingsList, setFindingsList] = React.useState<Finding[]>(mockFindings);
   const [selectedFinding, setSelectedFinding] = React.useState<Finding | null>(
     null
   );
   const [sheetOpen, setSheetOpen] = React.useState(false);
   const [copiedFile, setCopiedFile] = React.useState(false);
 
-  // Available repositories from mock findings
+  const handleUpdateFindingStatus = React.useCallback(
+    (findingId: string, nextStatus: FindingStatus, actionLabel: string) => {
+      setFindingsList((prev) =>
+        prev.map((item) =>
+          item.id === findingId ? { ...item, status: nextStatus } : item
+        )
+      );
+      setSelectedFinding((prev) =>
+        prev && prev.id === findingId ? { ...prev, status: nextStatus } : prev
+      );
+      toast.success(`${findingId}: ${actionLabel}`);
+    },
+    []
+  );
+
+  // Available repositories from findings
   const allRepositories = React.useMemo(() => {
-    return Array.from(new Set(mockFindings.map((f) => f.repository))).sort();
-  }, []);
+    return Array.from(new Set(findingsList.map((f) => f.repository))).sort();
+  }, [findingsList]);
 
   // Filtered dataset
   const filteredFindings = React.useMemo(() => {
     if (isEmpty) return [];
-    return mockFindings.filter((item) => {
+    return findingsList.filter((item) => {
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matches =
@@ -277,7 +261,7 @@ function FindingsContent() {
       }
       return true;
     });
-  }, [isEmpty, searchQuery, severityFilter, statusFilter, repoFilter]);
+  }, [isEmpty, findingsList, searchQuery, severityFilter, statusFilter, repoFilter]);
 
   const handleCopyPath = (filePath: string) => {
     navigator.clipboard.writeText(filePath);
@@ -514,13 +498,29 @@ function FindingsContent() {
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
-                  <DropdownMenuItem className="cursor-pointer">
+                  <DropdownMenuItem
+                    className="cursor-pointer"
+                    onClick={() =>
+                      handleUpdateFindingStatus(
+                        row.original.id,
+                        "Triaged",
+                        "Marked as triaged"
+                      )
+                    }
+                  >
                     <CheckCircle2Icon data-icon="inline-start" />
                     <span>Accept</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     variant="destructive"
                     className="cursor-pointer"
+                    onClick={() =>
+                      handleUpdateFindingStatus(
+                        row.original.id,
+                        "Fixed",
+                        "Dismissed from active queue"
+                      )
+                    }
                   >
                     <XCircleIcon data-icon="inline-start" />
                     <span>Reject</span>
@@ -534,7 +534,7 @@ function FindingsContent() {
         enableHiding: false,
       },
     ],
-    []
+    [handleUpdateFindingStatus]
   );
 
   const table = useLegacyTable({
@@ -574,7 +574,7 @@ function FindingsContent() {
   });
 
   const selectedCount = Object.keys(rowSelection).length;
-  const totalFindingsCount = mockFindings.length;
+  const totalFindingsCount = findingsList.length;
   const filteredCount = filteredFindings.length;
   const hasActiveFilters =
     searchQuery.trim().length > 0 ||
@@ -642,74 +642,48 @@ function FindingsContent() {
       )}
 
       {/* 4 Stat Cards: rounded-lg, 1px border, 20px padding (p-5), muted subtext line */}
+      {/* KPI Stat Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Open findings */}
-        <Card className="rounded-lg border border-border bg-card p-5 shadow-none flex flex-col gap-1">
-          <span className="text-xs font-medium text-muted-foreground">
-            Open findings
-          </span>
-          {isLoading ? (
-            <Skeleton className="h-8 w-16" />
-          ) : (
-            <div className="text-2xl font-semibold leading-8 text-foreground">
-              {isEmpty ? "0" : "42"}
-            </div>
-          )}
-          <span className="text-xs text-muted-foreground">
-            +5 since yesterday
-          </span>
-        </Card>
-
-        {/* Critical */}
-        <Card className="rounded-lg border border-border bg-card p-5 shadow-none flex flex-col gap-1">
-          <span className="text-xs font-medium text-muted-foreground">
-            Critical
-          </span>
-          {isLoading ? (
-            <Skeleton className="h-8 w-12" />
-          ) : (
-            <div className="text-2xl font-semibold leading-8 text-destructive">
-              {isEmpty ? "0" : "3"}
-            </div>
-          )}
-          <span className="text-xs text-muted-foreground">
-            Unchanged
-          </span>
-        </Card>
-
-        {/* Scans today */}
-        <Card className="rounded-lg border border-border bg-card p-5 shadow-none flex flex-col gap-1">
-          <span className="text-xs font-medium text-muted-foreground">
-            Scans today
-          </span>
-          {isLoading ? (
-            <Skeleton className="h-8 w-14" />
-          ) : (
-            <div className="text-2xl font-semibold leading-8 text-foreground">
-              {isEmpty ? "0" : "18"}
-            </div>
-          )}
-          <span className="text-xs text-muted-foreground">
-            3 in progress
-          </span>
-        </Card>
-
-        {/* Queue lag */}
-        <Card className="rounded-lg border border-border bg-card p-5 shadow-none flex flex-col gap-1">
-          <span className="text-xs font-medium text-muted-foreground">
-            Queue lag
-          </span>
-          {isLoading ? (
-            <Skeleton className="h-8 w-16" />
-          ) : (
-            <div className="text-2xl font-semibold leading-8 text-success">
-              0.4s
-            </div>
-          )}
-          <span className="text-xs text-muted-foreground">
-            Optimal performance
-          </span>
-        </Card>
+        <StatCard
+          title="Open findings"
+          value={
+            isLoading ? (
+              <Skeleton className="h-8 w-16" />
+            ) : isEmpty ? (
+              "0"
+            ) : (
+              findingsList.filter((f) => f.status !== "Fixed").length
+            )
+          }
+          description="Active across all connected repos"
+        />
+        <StatCard
+          title="Critical"
+          value={
+            isLoading ? (
+              <Skeleton className="h-8 w-12" />
+            ) : isEmpty ? (
+              "0"
+            ) : (
+              findingsList.filter(
+                (f) => f.severity === "Critical" && f.status !== "Fixed"
+              ).length
+            )
+          }
+          valueClassName="text-destructive"
+          description="Merge-blocking priority tier"
+        />
+        <StatCard
+          title="Scans today"
+          value={isLoading ? <Skeleton className="h-8 w-14" /> : isEmpty ? "0" : "18"}
+          description="3 currently running"
+        />
+        <StatCard
+          title="Queue lag"
+          value={isLoading ? <Skeleton className="h-8 w-16" /> : "0.4s"}
+          valueClassName="text-success"
+          description="Optimal scanner throughput"
+        />
       </div>
 
       {/* Main Table Card (rounded-lg, 1px border, no shadow) */}
@@ -776,22 +750,21 @@ function FindingsContent() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             {/* Search Input and Filter Dropdowns */}
             <div className="flex flex-wrap items-center gap-2">
-              {/* Search with accessible label */}
-              <div className="relative w-full sm:w-64">
-                <label htmlFor="findings-search" className="sr-only">
-                  Search findings
-                </label>
-                <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
-                <Input
+              {/* Search with InputGroup */}
+              <InputGroup className="w-full sm:w-64">
+                <InputGroupAddon>
+                  <SearchIcon />
+                </InputGroupAddon>
+                <InputGroupInput
                   id="findings-search"
                   type="search"
                   placeholder="Search findings..."
+                  aria-label="Search findings"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8 h-8 text-xs rounded-lg"
                   disabled={isLoading || isEmpty}
                 />
-              </div>
+              </InputGroup>
 
               {/* Severity Filter Dropdown */}
               <DropdownMenu>
@@ -1363,14 +1336,28 @@ function FindingsContent() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setSheetOpen(false)}
+                  onClick={() => {
+                    handleUpdateFindingStatus(
+                      selectedFinding.id,
+                      "Triaged",
+                      "Accepted into remediation backlog"
+                    );
+                    setSheetOpen(false);
+                  }}
                 >
                   Accept
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setSheetOpen(false)}
+                  onClick={() => {
+                    handleUpdateFindingStatus(
+                      selectedFinding.id,
+                      "Fixed",
+                      "Marked as dismissed"
+                    );
+                    setSheetOpen(false);
+                  }}
                 >
                   Reject
                 </Button>
@@ -1378,7 +1365,14 @@ function FindingsContent() {
                 <Button
                   variant="default"
                   size="sm"
-                  onClick={() => setSheetOpen(false)}
+                  onClick={() => {
+                    handleUpdateFindingStatus(
+                      selectedFinding.id,
+                      "Fixed",
+                      "Automated patch PR queued"
+                    );
+                    setSheetOpen(false);
+                  }}
                 >
                   <WrenchIcon data-icon="inline-start" />
                   <span>Fix this</span>

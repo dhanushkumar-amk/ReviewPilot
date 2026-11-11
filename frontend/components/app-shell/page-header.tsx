@@ -3,7 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "cn";
+
+import { cn } from "@/lib/utils";
 
 export interface PageTab {
   label: string;
@@ -21,7 +22,9 @@ interface PageHeaderProps extends React.ComponentProps<"div"> {
 
 const defaultTabs: PageTab[] = [
   { label: "Overview", href: "/dashboard" },
+  { label: "Repositories", href: "/repositories" },
   { label: "Scans", href: "/scans" },
+  { label: "Findings", href: "/findings" },
   { label: "Rules", href: "/rules" },
   { label: "Settings", href: "/settings" },
 ];
@@ -40,53 +43,50 @@ export function PageHeader({
 
   return (
     <div className={cn("flex flex-col gap-4", className)} {...props}>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold leading-9 tracking-tight text-foreground">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 flex-col gap-1">
+          <h1 className="font-heading text-2xl font-semibold tracking-tight text-foreground">
             {title}
           </h1>
-          {description && (
-            <p className="text-sm leading-5 text-muted-foreground">
-              {description}
-            </p>
-          )}
+          {description ? (
+            <p className="text-sm text-muted-foreground">{description}</p>
+          ) : null}
         </div>
-        {actions && (
-          <div className="flex items-center gap-2 shrink-0">{actions}</div>
-        )}
+        {actions ? (
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            {actions}
+          </div>
+        ) : null}
       </div>
 
-      {showTabs && tabs && tabs.length > 0 && (
-        <div className="border-b border-border -mb-2">
-          <nav
-            className="flex items-center gap-6 -mb-px"
-            aria-label="Section navigation"
-          >
-            {tabs.map((tab) => {
-              const isActive = activeTabHref
-                ? activeTabHref === tab.href
-                : pathname === tab.href ||
-                  (pathname.startsWith("/findings") && tab.href === "/dashboard");
+      {showTabs && tabs.length > 0 ? (
+        <nav
+          aria-label="Section navigation"
+          className="flex items-center gap-1 overflow-x-auto border-b border-border"
+        >
+          {tabs.map((tab) => {
+            const isActive = activeTabHref
+              ? activeTabHref === tab.href
+              : pathname === tab.href || pathname.startsWith(`${tab.href}/`);
 
-              return (
-                <Link
-                  key={tab.href}
-                  href={tab.href}
-                  aria-current={isActive ? "page" : undefined}
-                  className={cn(
-                    "relative pb-3 text-sm font-medium transition-colors border-b-2 outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-                    isActive
-                      ? "border-primary text-foreground font-semibold"
-                      : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
-                  )}
-                >
-                  {tab.label}
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
-      )}
+            return (
+              <Link
+                key={tab.href}
+                href={tab.href}
+                aria-current={isActive ? "page" : undefined}
+                className={cn(
+                  "relative shrink-0 border-b-2 px-3 py-2 text-sm font-medium transition-colors whitespace-nowrap",
+                  isActive
+                    ? "border-primary text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {tab.label}
+              </Link>
+            );
+          })}
+        </nav>
+      ) : null}
     </div>
   );
 }
