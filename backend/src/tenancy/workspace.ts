@@ -98,3 +98,4 @@ export async function requireWorkspace(
     role: membership.role,
   };
 }
+

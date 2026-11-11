@@ -30,3 +30,4 @@ export function formatWorkspaceRole(role?: string | null): string {
   if (!normalized) return "Member";
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
+

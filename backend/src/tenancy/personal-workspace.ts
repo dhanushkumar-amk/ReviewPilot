@@ -104,3 +104,4 @@ export async function ensureUserHasWorkspace(user: {
 
   throw new Error("Unable to allocate a unique personal workspace slug");
 }
+

@@ -8,3 +8,4 @@ afterAll(async () => {
   const { prisma } = await import("../src/db.js");
   await prisma.$disconnect();
 });
+
