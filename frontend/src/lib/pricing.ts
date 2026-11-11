@@ -46,3 +46,4 @@ export const PRICING_PLANS: Plan[] = [
 ];
 
 export const PRICING_FOOTNOTE = "Prices shown are launch placeholders.";
+

@@ -104,3 +104,4 @@ export function FindingRow({ finding, className, onAction }: FindingRowProps) {
     </div>
   );
 }
+

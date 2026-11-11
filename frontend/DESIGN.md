@@ -202,3 +202,4 @@ Scoped strictly to `(marketing)` route group via `next/font/google`:
   - **The Pinned Push-to-PR Story:** Replaces standard text bullet lists with a pinned 4-stage morphing stage showing exact ReviewPilot telemetry: Git webhook push → Semgrep/ESLint/gitleaks scan → Interactive finding card review → Sandbox verified pull request creation.
   - **Deterministic Light-Only Theme:** No generic dark-mode AI "aurora purple" glows or marketing fluff. Strict technical light theme modeled after precision developer tools (Cloudflare, GitHub, Stripe CLI).
   - **Audit Guarantee:** Full static DOM mockups with accessible table fallbacks, keyboard navigability, and complete zero-reduced-motion graceful degradation.
+
