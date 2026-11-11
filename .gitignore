@@ -1,6 +1,7 @@
 node_modules/
 dist/
 .next/
+backend/src/generated/prisma/
 
 # Env files (never commit real secrets)
 .env
@@ -8,3 +9,4 @@ dist/
 !.env.example
 !.env.local.example
 !.env.*.example
+

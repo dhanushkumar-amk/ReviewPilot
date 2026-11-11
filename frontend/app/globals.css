@@ -57,7 +57,8 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-:root {
+:root,
+.light {
   --radius: 0.5rem;
   --background: #F7F7F7;
   --foreground: #111111;
