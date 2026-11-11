@@ -1,4 +1,5 @@
 import { buildApp } from "./app.js";
+import { prisma } from "./db.js";
 import { env } from "./env.js";
 
 async function start(): Promise<void> {
@@ -14,6 +15,7 @@ async function start(): Promise<void> {
 
     try {
       await app.close();
+      await prisma.$disconnect();
       process.exit(0);
     } catch (err) {
       app.log.error({ err }, "Error during shutdown");
