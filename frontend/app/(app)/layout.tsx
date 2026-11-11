@@ -52,10 +52,10 @@ async function ProtectedAppShell({ children }: { children: React.ReactNode }) {
         className="min-h-screen bg-background"
       >
         <AppSidebar />
-        <SidebarInset className="flex flex-1 flex-col min-w-0 bg-background">
+        <SidebarInset className="flex flex-1 flex-col min-w-0 overflow-x-hidden bg-background">
           <TopBar />
-          <div className="flex-1 p-8">
-            <div className="mx-auto w-full max-w-6xl">{children}</div>
+          <div className="flex-1 p-6 lg:p-8">
+            <div className="mx-auto w-full max-w-7xl">{children}</div>
           </div>
         </SidebarInset>
       </SidebarProvider>

@@ -132,12 +132,10 @@ export function TopBar() {
 
   return (
     <header className="flex h-14 w-full items-center justify-between border-b border-border bg-card px-4 sm:px-6 shrink-0">
-      <div className="flex items-center gap-3">
-        {/* Mobile menu toggle button */}
-        <SidebarTrigger
-          aria-label="Toggle navigation menu"
-          className="size-8 md:hidden"
-        />
+      <div className="flex items-center gap-2">
+        {/* Sidebar collapse toggle */}
+        <SidebarTrigger aria-label="Toggle navigation menu" className="-ml-1" />
+        <Separator orientation="vertical" className="mr-1 h-4" />
 
         <Breadcrumb>
           <BreadcrumbList>

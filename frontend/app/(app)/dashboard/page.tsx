@@ -198,7 +198,7 @@ export default function DashboardPage() {
 
       {/* Main Analytics + Severity Breakdown */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+        <Card className="min-w-0 lg:col-span-2">
           <CardHeader>
             <CardTitle>Review & remediation velocity</CardTitle>
             <CardDescription>
@@ -324,7 +324,7 @@ export default function DashboardPage() {
 
       {/* Bottom Split: Recent Findings + Pull Request Queue */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+        <Card className="min-w-0 lg:col-span-2">
           <CardHeader>
             <CardTitle>Priority findings queue</CardTitle>
             <CardDescription>
