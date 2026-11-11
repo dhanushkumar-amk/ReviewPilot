@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
   Breadcrumb,
@@ -55,6 +55,7 @@ import {
   getUserInitials,
   useInitialAuthUser,
 } from "@/components/auth/auth-user-provider";
+import { useWorkspace } from "@/src/features/me/use-me";
 import { authClient } from "@/src/lib/auth-client";
 
 const routeNames: Record<string, string> = {
@@ -71,7 +72,7 @@ const routeNames: Record<string, string> = {
   "/support": "Support",
 };
 
-const notificationsList = [
+const demoNotificationsList = [
   {
     id: "n-1",
     title: "Critical SQL injection flagged",
@@ -98,14 +99,20 @@ const notificationsList = [
 export function TopBar() {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isDemoMode =
+    process.env.NODE_ENV === "development" && searchParams.get("demo") === "1";
+
   const { data: session } = authClient.useSession();
   const initialUser = useInitialAuthUser();
-  const currentUser = session?.user ?? initialUser;
+  const { user: meUser } = useWorkspace();
+  const currentUser = session?.user ?? meUser ?? initialUser;
   const displayName = currentUser?.name ?? "User";
   const displayEmail = currentUser?.email ?? "";
   const initials = getUserInitials(displayName, displayEmail);
   const [signingOut, setSigningOut] = React.useState(false);
   const [readIds, setReadIds] = React.useState<string[]>([]);
+  const notificationsList = isDemoMode ? demoNotificationsList : [];
   const currentTitle = routeNames[pathname] ?? "Overview";
   const unreadCount = notificationsList.filter(
     (item) => item.unread && !readIds.includes(item.id)
@@ -253,36 +260,42 @@ export function TopBar() {
             </PopoverHeader>
             <Separator />
             <div className="flex flex-col divide-y divide-border">
-              {notificationsList.map((item) => {
-                const isUnread = item.unread && !readIds.includes(item.id);
-                return (
-                  <Link
-                    key={item.id}
-                    href={item.href}
-                    onClick={() =>
-                      setReadIds((prev) =>
-                        prev.includes(item.id) ? prev : [...prev, item.id]
-                      )
-                    }
-                    className="flex items-start gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-muted"
-                  >
-                    <span
-                      className={`mt-1.5 size-2 shrink-0 rounded-full ${
-                        isUnread ? "bg-primary" : "bg-muted-foreground/30"
-                      }`}
-                      aria-hidden="true"
-                    />
-                    <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                      <span className="truncate text-xs font-medium text-foreground">
-                        {item.title}
-                      </span>
-                      <PopoverDescription className="truncate text-xs">
-                        {item.detail}
-                      </PopoverDescription>
-                    </div>
-                  </Link>
-                );
-              })}
+              {notificationsList.length === 0 ? (
+                <div className="px-3 py-6 text-center text-xs text-muted-foreground">
+                  All caught up. No notifications for this workspace.
+                </div>
+              ) : (
+                notificationsList.map((item) => {
+                  const isUnread = item.unread && !readIds.includes(item.id);
+                  return (
+                    <Link
+                      key={item.id}
+                      href={item.href}
+                      onClick={() =>
+                        setReadIds((prev) =>
+                          prev.includes(item.id) ? prev : [...prev, item.id]
+                        )
+                      }
+                      className="flex items-start gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-muted"
+                    >
+                      <span
+                        className={`mt-1.5 size-2 shrink-0 rounded-full ${
+                          isUnread ? "bg-primary" : "bg-muted-foreground/30"
+                        }`}
+                        aria-hidden="true"
+                      />
+                      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                        <span className="truncate text-xs font-medium text-foreground">
+                          {item.title}
+                        </span>
+                        <PopoverDescription className="truncate text-xs">
+                          {item.detail}
+                        </PopoverDescription>
+                      </div>
+                    </Link>
+                  );
+                })
+              )}
             </div>
           </PopoverContent>
         </Popover>

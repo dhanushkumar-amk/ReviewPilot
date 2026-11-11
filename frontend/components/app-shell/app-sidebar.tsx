@@ -52,6 +52,10 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
+import {
+  formatWorkspaceRole,
+  useWorkspace,
+} from "@/src/features/me/use-me";
 import { authClient } from "@/src/lib/auth-client";
 import { CommandPalette } from "./command-palette";
 
@@ -87,7 +91,6 @@ const platformItems: NavItem[] = [
     title: "Pull requests",
     href: "/pull-requests",
     icon: GitPullRequestIcon,
-    badge: "4",
   },
   {
     title: "Rules",
@@ -127,25 +130,43 @@ const secondaryItems: NavItem[] = [
   },
 ];
 
-const workspaces = [
-  { name: "ReviewPilot", plan: "Production" },
-  { name: "ReviewPilot", plan: "Staging" },
-];
+function workspaceMonogram(name?: string | null): string {
+  const cleaned = name?.trim();
+  if (!cleaned) return "RP";
+  const words = cleaned.split(/\s+/).filter(Boolean);
+  if (words.length >= 2) {
+    return `${words[0][0]}${words[1][0]}`.toUpperCase();
+  }
+  return cleaned.slice(0, 2).toUpperCase();
+}
 
 export function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session } = authClient.useSession();
   const initialUser = useInitialAuthUser();
-  const currentUser = session?.user ?? initialUser;
+  const {
+    user: meUser,
+    activeWorkspace,
+    workspaces,
+    isSwitching,
+    switchWorkspace,
+  } = useWorkspace();
+
+  const currentUser = session?.user ?? meUser ?? initialUser;
   const displayName = currentUser?.name ?? "User";
   const displayEmail = currentUser?.email ?? "";
   const initials = getUserInitials(displayName, displayEmail);
 
+  const activeWorkspaceName =
+    activeWorkspace?.name ?? workspaces[0]?.name ?? "Workspace";
+  const activeWorkspaceRoleLabel = activeWorkspace
+    ? formatWorkspaceRole(activeWorkspace.role)
+    : workspaces[0]
+      ? formatWorkspaceRole(workspaces[0].role)
+      : "No active workspace";
+
   const [commandOpen, setCommandOpen] = React.useState(false);
-  const [selectedWorkspace, setSelectedWorkspace] = React.useState(
-    workspaces[0]
-  );
   const [signingOut, setSigningOut] = React.useState(false);
 
   const handleSignOut = async () => {
@@ -176,20 +197,20 @@ export function AppSidebar() {
                   render={
                     <SidebarMenuButton
                       size="lg"
-                      tooltip={`${selectedWorkspace.name} (${selectedWorkspace.plan})`}
+                      tooltip={`${activeWorkspaceName} (${activeWorkspaceRoleLabel})`}
                       className="data-[popup-open]:bg-sidebar-accent data-[popup-open]:text-sidebar-accent-foreground"
                     />
                   }
                 >
                   <div className="flex aspect-square size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground font-mono text-xs font-bold">
-                    RP
+                    {workspaceMonogram(activeWorkspaceName)}
                   </div>
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     <span className="truncate font-semibold">
-                      {selectedWorkspace.name}
+                      {activeWorkspaceName}
                     </span>
                     <span className="truncate text-xs text-muted-foreground">
-                      {selectedWorkspace.plan} · Enterprise
+                      {isSwitching ? "Switching..." : activeWorkspaceRoleLabel}
                     </span>
                   </div>
                   <ChevronsUpDownIcon className="ml-auto" />
@@ -198,28 +219,41 @@ export function AppSidebar() {
                   align="start"
                   side="right"
                   sideOffset={8}
-                  className="w-56"
+                  className="w-60"
                 >
                   <DropdownMenuGroup>
                     <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
-                    {workspaces.map((ws) => {
-                      const active = ws.plan === selectedWorkspace.plan;
-                      return (
-                        <DropdownMenuItem
-                          key={ws.plan}
-                          onClick={() => setSelectedWorkspace(ws)}
-                          className="cursor-pointer"
-                        >
-                          <div className="flex flex-1 flex-col">
-                            <span className="font-medium">{ws.name}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {ws.plan}
-                            </span>
-                          </div>
-                          {active ? <CheckIcon data-icon="inline-end" /> : null}
-                        </DropdownMenuItem>
-                      );
-                    })}
+                    {workspaces.length === 0 ? (
+                      <DropdownMenuItem disabled>
+                        <span className="text-xs text-muted-foreground">
+                          No workspaces available
+                        </span>
+                      </DropdownMenuItem>
+                    ) : (
+                      workspaces.map((ws) => {
+                        const active = ws.id === activeWorkspace?.id;
+                        return (
+                          <DropdownMenuItem
+                            key={ws.id}
+                            disabled={isSwitching}
+                            onClick={() => {
+                              void switchWorkspace(ws.id);
+                            }}
+                            className="cursor-pointer"
+                          >
+                            <div className="flex min-w-0 flex-1 flex-col">
+                              <span className="truncate font-medium">
+                                {ws.name}
+                              </span>
+                              <span className="truncate text-xs text-muted-foreground">
+                                {formatWorkspaceRole(ws.role)}
+                              </span>
+                            </div>
+                            {active ? <CheckIcon data-icon="inline-end" /> : null}
+                          </DropdownMenuItem>
+                        );
+                      })
+                    )}
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator />
                   <DropdownMenuGroup>

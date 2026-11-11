@@ -1,7 +1,9 @@
 import dotenv from "dotenv";
 import { z } from "zod";
 
-dotenv.config();
+if (process.env.NODE_ENV !== "test") {
+  dotenv.config();
+}
 
 const optionalNonEmptyString = z.preprocess(
   (value) => (typeof value === "string" && value.trim().length === 0 ? undefined : value),

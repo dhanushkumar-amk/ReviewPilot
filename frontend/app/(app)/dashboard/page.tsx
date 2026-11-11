@@ -2,25 +2,17 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-} from "recharts";
-import {
-  ActivityIcon,
   ArrowUpRightIcon,
+  CheckCircle2Icon,
+  CircleDashedIcon,
   FolderGit2Icon,
-  GitPullRequestIcon,
-  PlusIcon,
-  ShieldAlertIcon,
-  ShieldCheckIcon,
+  GitBranchIcon,
 } from "lucide-react";
 
 import { PageHeader } from "@/components/app-shell/page-header";
-import { StatCard } from "@/components/app-shell/stat-card";
+import { DemoDashboard } from "@/components/dashboard/demo-dashboard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,419 +24,227 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from "@/components/ui/chart";
 import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  initialPullRequests,
-  initialRepositories,
-  initialScanRuns,
-  scanActivityChartData,
-} from "@/lib/dashboard-data";
-import { mockFindings, type Severity } from "@/lib/mock-data";
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { formatWorkspaceRole, useWorkspace } from "@/src/features/me/use-me";
 
-const chartConfig = {
-  reviews: {
-    label: "PR reviews",
-    color: "var(--primary)",
-  },
-  findings: {
-    label: "Issues flagged",
-    color: "var(--destructive)",
-  },
-  fixed: {
-    label: "Patches merged",
-    color: "var(--success)",
-  },
-} satisfies ChartConfig;
-
-function severityBadgeVariant(
-  severity: Severity
-): React.ComponentProps<typeof Badge>["variant"] {
-  if (severity === "Critical" || severity === "High") return "destructive";
-  if (severity === "Medium") return "default";
-  return "secondary";
+interface OnboardingStep {
+  id: string;
+  title: string;
+  description: string;
+  done: boolean;
+  action?: React.ReactNode;
 }
 
 export default function DashboardPage() {
-  const totalFindings = mockFindings.length;
-  const openFindings = mockFindings.filter(
-    (item) => item.status !== "Fixed"
-  ).length;
-  const fixedFindings = mockFindings.filter(
-    (item) => item.status === "Fixed"
-  ).length;
-  const criticalCount = mockFindings.filter(
-    (item) => item.severity === "Critical"
-  ).length;
-  const highCount = mockFindings.filter(
-    (item) => item.severity === "High"
-  ).length;
-  const mediumCount = mockFindings.filter(
-    (item) => item.severity === "Medium"
-  ).length;
-  const lowCount = mockFindings.filter(
-    (item) => item.severity === "Low"
-  ).length;
+  const searchParams = useSearchParams();
+  const isDemoMode =
+    process.env.NODE_ENV === "development" && searchParams.get("demo") === "1";
 
-  const connectedRepos = initialRepositories.filter(
-    (repo) => repo.webhookStatus === "Connected"
-  ).length;
+  const { user, activeWorkspace, workspaces } = useWorkspace();
 
-  const severityRows: {
-    label: Severity;
-    count: number;
-    percent: number;
-    variant: React.ComponentProps<typeof Badge>["variant"];
-  }[] = [
+  if (isDemoMode) {
+    return <DemoDashboard />;
+  }
+
+  const workspaceName = activeWorkspace?.name ?? "Personal workspace";
+  const workspaceRole = formatWorkspaceRole(activeWorkspace?.role);
+
+  const steps: OnboardingStep[] = [
     {
-      label: "Critical",
-      count: criticalCount,
-      percent: Math.round((criticalCount / totalFindings) * 100),
-      variant: "destructive",
+      id: "account",
+      title: "Create your account",
+      description: user?.email
+        ? `Signed in as ${user.email} in ${workspaceName}.`
+        : `Account verified and personal workspace initialized.`,
+      done: true,
     },
     {
-      label: "High",
-      count: highCount,
-      percent: Math.round((highCount / totalFindings) * 100),
-      variant: "destructive",
+      id: "github",
+      title: "Connect GitHub",
+      description:
+        "Install the ReviewPilot GitHub App to authorize repository discovery and pull request webhooks.",
+      done: false,
+      action: (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <span className="inline-flex cursor-not-allowed" tabIndex={0} />
+              }
+            >
+              <Button type="button" variant="outline" size="sm" disabled>
+                <GitBranchIcon data-icon="inline-start" />
+                Connect GitHub
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Available in the next step</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      ),
     },
     {
-      label: "Medium",
-      count: mediumCount,
-      percent: Math.round((mediumCount / totalFindings) * 100),
-      variant: "default",
+      id: "repository",
+      title: "Choose a repository",
+      description:
+        "Select which repositories inside this workspace should receive automated code and security reviews.",
+      done: false,
     },
     {
-      label: "Low",
-      count: lowCount,
-      percent: Math.round((lowCount / totalFindings) * 100),
-      variant: "secondary",
+      id: "scan",
+      title: "Run your first scan",
+      description:
+        "Open a pull request or trigger a baseline security scan to see findings and remediation verdicts.",
+      done: false,
     },
   ];
 
-  const recentFindings = mockFindings.slice(0, 5);
-  const activeRun = initialScanRuns[0];
+  const completedCount = steps.filter((step) => step.done).length;
+  const progressPct = Math.round((completedCount / steps.length) * 100);
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Overview"
-        description="Real-time code review telemetry, PR security verdicts, and remediation velocity across your connected repositories."
+        description={`Workspace overview and setup checklist for ${workspaceName}.`}
         actions={
-          <>
-            <Button
-              variant="outline"
-              render={<Link href="/repositories" />}
-              nativeButton={false}
-            >
-              <PlusIcon data-icon="inline-start" />
-              Connect repository
-            </Button>
-            <Button
-              render={<Link href="/findings" />}
-              nativeButton={false}
-            >
-              <ShieldAlertIcon data-icon="inline-start" />
-              Inspect findings
-            </Button>
-          </>
+          <Button
+            variant="outline"
+            render={<Link href="/repositories" />}
+            nativeButton={false}
+          >
+            <FolderGit2Icon data-icon="inline-start" />
+            View repositories
+          </Button>
         }
       />
 
-      {/* KPI Metrics Row */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Connected repositories"
-          value={connectedRepos}
-          description={`${initialRepositories.length} total · ${initialRepositories.filter((r) => r.autoScan).length} with auto-scan`}
-          icon={FolderGit2Icon}
-        />
-        <StatCard
-          title="Open findings"
-          value={openFindings}
-          description={`${criticalCount} critical awaiting remediation`}
-          badge={{ label: "Action needed", variant: "destructive" }}
-        />
-        <StatCard
-          title="PR reviews (14d)"
-          value={324}
-          description="Avg review latency 38s across 4 active repos"
-          icon={GitPullRequestIcon}
-        />
-        <StatCard
-          title="Patch acceptance"
-          value="91%"
-          valueClassName="text-success"
-          description={`${fixedFindings} inventory issues resolved cleanly`}
-          badge={{ label: "+6.4%", variant: "success" }}
-        />
-      </div>
-
-      {/* Main Analytics + Severity Breakdown */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card className="min-w-0 lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Review & remediation velocity</CardTitle>
+          <CardHeader className="border-b">
+            <CardTitle>Workspace onboarding</CardTitle>
             <CardDescription>
-              Daily pull requests analyzed versus issues detected and patches merged
+              Follow these steps to connect your repositories and run your first automated review.
             </CardDescription>
             <CardAction>
-              <Badge variant="outline">Last 11 days</Badge>
+              <Badge variant="secondary">
+                {completedCount} of {steps.length} complete
+              </Badge>
             </CardAction>
           </CardHeader>
-          <CardContent>
-            <ChartContainer config={chartConfig} className="h-[260px] w-full">
-              <AreaChart
-                data={scanActivityChartData}
-                margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
-              >
-                <CartesianGrid vertical={false} />
-                <XAxis
-                  dataKey="date"
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                />
-                <YAxis tickLine={false} axisLine={false} tickMargin={8} />
-                <ChartTooltip
-                  cursor={false}
-                  content={<ChartTooltipContent />}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="reviews"
-                  fill="var(--color-reviews)"
-                  fillOpacity={0.14}
-                  stroke="var(--color-reviews)"
-                  strokeWidth={2}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="fixed"
-                  fill="var(--color-fixed)"
-                  fillOpacity={0.14}
-                  stroke="var(--color-fixed)"
-                  strokeWidth={2}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="findings"
-                  fill="var(--color-findings)"
-                  fillOpacity={0.12}
-                  stroke="var(--color-findings)"
-                  strokeWidth={2}
-                />
-                <ChartLegend content={<ChartLegendContent />} />
-              </AreaChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
+          <CardContent className="flex flex-col gap-5 pt-5">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Setup progress</span>
+                <span className="font-mono tabular-nums">{progressPct}%</span>
+              </div>
+              <Progress value={progressPct} />
+            </div>
 
-        <Card className="flex flex-col">
-          <CardHeader>
-            <CardTitle>Findings by severity</CardTitle>
-            <CardDescription>
-              Click any tier to filter the security workbench
-            </CardDescription>
-            <CardAction>
-              <Badge variant="secondary">{totalFindings} total</Badge>
-            </CardAction>
-          </CardHeader>
-          <CardContent className="flex flex-1 flex-col justify-between gap-4">
-            <div className="flex flex-col gap-4">
-              {severityRows.map((row) => (
-                <Link
-                  key={row.label}
-                  href={`/findings?severity=${row.label}`}
-                  className="group flex flex-col gap-1.5 rounded-lg p-2 -mx-2 transition-colors hover:bg-muted"
+            <div className="flex flex-col gap-3">
+              {steps.map((step, index) => (
+                <div
+                  key={step.id}
+                  className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between"
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <Badge variant={row.variant}>{row.label}</Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {row.percent}% of inventory
-                      </span>
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 shrink-0">
+                      {step.done ? (
+                        <CheckCircle2Icon className="size-5 text-success" />
+                      ) : (
+                        <CircleDashedIcon className="size-5 text-muted-foreground" />
+                      )}
                     </div>
-                    <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
-                      {row.count}
-                    </span>
+                    <div className="flex min-w-0 flex-col gap-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-mono text-xs text-muted-foreground">
+                          0{index + 1}
+                        </span>
+                        <span className="text-sm font-semibold text-foreground">
+                          {step.title}
+                        </span>
+                        <Badge variant={step.done ? "success" : "outline"}>
+                          {step.done ? "Done" : "Not started"}
+                        </Badge>
+                      </div>
+                      <p className="text-xs leading-relaxed text-muted-foreground">
+                        {step.description}
+                      </p>
+                    </div>
                   </div>
-                  <Progress value={row.percent} />
-                </Link>
+                  {step.action ? (
+                    <div className="shrink-0 self-start sm:self-center">
+                      {step.action}
+                    </div>
+                  ) : null}
+                </div>
               ))}
             </div>
-
-            <Separator />
-
-            <div className="flex items-center justify-between gap-2 text-xs">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <ActivityIcon className="size-4 text-primary" />
-                <span>
-                  Live job:{" "}
-                  <span className="font-mono font-medium text-foreground">
-                    {activeRun.id}
-                  </span>
-                </span>
-              </div>
-              <Badge variant="default">{activeRun.status}</Badge>
-            </div>
-          </CardContent>
-          <CardFooter className="justify-between">
-            <span className="text-xs text-muted-foreground">
-              {initialPullRequests.length} active PRs monitored
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              render={<Link href="/scans" />}
-              nativeButton={false}
-            >
-              View scans
-              <ArrowUpRightIcon data-icon="inline-end" />
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
-
-      {/* Bottom Split: Recent Findings + Pull Request Queue */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <Card className="min-w-0 lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Priority findings queue</CardTitle>
-            <CardDescription>
-              Highest-severity issues flagged in recent commits and pull requests
-            </CardDescription>
-            <CardAction>
-              <Button
-                variant="outline"
-                size="sm"
-                render={<Link href="/findings" />}
-                nativeButton={false}
-              >
-                Open workbench
-                <ArrowUpRightIcon data-icon="inline-end" />
-              </Button>
-            </CardAction>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Issue</TableHead>
-                  <TableHead>Repository</TableHead>
-                  <TableHead>Severity</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentFindings.map((finding) => (
-                  <TableRow key={finding.id}>
-                    <TableCell className="font-mono text-xs text-muted-foreground">
-                      {finding.id}
-                    </TableCell>
-                    <TableCell className="max-w-[260px] truncate font-medium">
-                      <Link
-                        href={`/findings?severity=${finding.severity}`}
-                        className="hover:underline"
-                      >
-                        {finding.title}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground">
-                      {finding.repository}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={severityBadgeVariant(finding.severity)}>
-                        {finding.severity}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          finding.status === "Fixed" ? "success" : "outline"
-                        }
-                      >
-                        {finding.status}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
           </CardContent>
         </Card>
 
         <Card className="flex flex-col">
-          <CardHeader>
-            <CardTitle>Recent pull requests</CardTitle>
+          <CardHeader className="border-b">
+            <CardTitle>Active workspace</CardTitle>
             <CardDescription>
-              Automated AI diff review verdicts
+              All repositories, scans, and findings are isolated to this workspace.
             </CardDescription>
-            <CardAction>
-              <ShieldCheckIcon className="size-4 text-success" />
-            </CardAction>
           </CardHeader>
-          <CardContent className="flex flex-1 flex-col gap-3">
-            {initialPullRequests.map((pr) => (
-              <Link
-                key={pr.id}
-                href="/pull-requests"
-                className="flex flex-col gap-1.5 rounded-lg border border-border p-3 transition-colors hover:bg-muted"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-mono text-xs text-muted-foreground">
-                    {pr.repository} #{pr.number}
-                  </span>
-                  <Badge
-                    variant={
-                      pr.verdict === "Approved"
-                        ? "success"
-                        : pr.verdict === "Changes requested"
-                        ? "destructive"
-                        : "secondary"
-                    }
-                  >
-                    {pr.verdict}
-                  </Badge>
-                </div>
-                <span className="truncate text-sm font-medium text-foreground">
-                  {pr.title}
+          <CardContent className="flex flex-1 flex-col gap-4 pt-5">
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">Name</span>
+              <span className="text-sm font-semibold text-foreground">
+                {workspaceName}
+              </span>
+            </div>
+
+            {activeWorkspace?.slug ? (
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-muted-foreground">Slug</span>
+                <span className="font-mono text-xs text-foreground">
+                  {activeWorkspace.slug}
                 </span>
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{pr.author}</span>
-                  <div className="flex items-center gap-2 font-mono">
-                    <span className="text-success">+{pr.additions}</span>
-                    <span className="text-destructive">-{pr.deletions}</span>
-                  </div>
-                </div>
-              </Link>
-            ))}
+              </div>
+            ) : null}
+
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">Your role</span>
+              <div>
+                <Badge variant="outline">{workspaceRole}</Badge>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">
+                Workspaces accessible
+              </span>
+              <span className="font-mono text-sm font-medium text-foreground">
+                {workspaces.length}
+              </span>
+            </div>
           </CardContent>
-          <CardFooter className="justify-end">
+          <CardFooter className="justify-between border-t">
             <Button
               variant="ghost"
               size="sm"
-              render={<Link href="/pull-requests" />}
+              render={<Link href="/repositories" />}
               nativeButton={false}
             >
-              All pull requests
+              Repositories
+              <ArrowUpRightIcon data-icon="inline-end" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              render={<Link href="/team" />}
+              nativeButton={false}
+            >
+              Members
               <ArrowUpRightIcon data-icon="inline-end" />
             </Button>
           </CardFooter>

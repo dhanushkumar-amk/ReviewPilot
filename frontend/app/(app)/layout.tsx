@@ -4,10 +4,8 @@ import { redirect } from "next/navigation";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-shell/app-sidebar";
 import { TopBar } from "@/components/app-shell/top-bar";
-import {
-  AuthUserProvider,
-  type AuthenticatedUser,
-} from "@/components/auth/auth-user-provider";
+import { AuthUserProvider } from "@/components/auth/auth-user-provider";
+import { meResponseSchema } from "@/src/features/me/schemas";
 import { env } from "@/src/lib/env";
 
 async function ProtectedAppShell({ children }: { children: React.ReactNode }) {
@@ -36,13 +34,14 @@ async function ProtectedAppShell({ children }: { children: React.ReactNode }) {
     redirect("/login?reauth=1");
   }
 
-  const payload = (await response.json()) as { user?: AuthenticatedUser };
-  if (!payload.user) {
+  const rawPayload: unknown = await response.json();
+  const parsed = meResponseSchema.safeParse(rawPayload);
+  if (!parsed.success) {
     redirect("/login?reauth=1");
   }
 
   return (
-    <AuthUserProvider user={payload.user}>
+    <AuthUserProvider initialMe={parsed.data}>
       <SidebarProvider
         style={
           {

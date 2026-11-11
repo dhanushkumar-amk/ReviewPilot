@@ -1,29 +1,27 @@
 "use client";
 
 import * as React from "react";
+import { MeInitialContext, type MeResponse, type MeUser } from "@/src/features/me/use-me";
 
-export interface AuthenticatedUser {
-  id: string;
-  name: string;
-  email: string;
-  emailVerified: boolean;
-  image?: string | null;
-}
-
-const AuthUserContext = React.createContext<AuthenticatedUser | null>(null);
+export type AuthenticatedUser = MeUser;
 
 export function AuthUserProvider({
-  user,
+  initialMe,
   children,
 }: {
-  user: AuthenticatedUser;
+  initialMe: MeResponse;
   children: React.ReactNode;
 }) {
-  return <AuthUserContext.Provider value={user}>{children}</AuthUserContext.Provider>;
+  return (
+    <MeInitialContext.Provider value={initialMe}>
+      {children}
+    </MeInitialContext.Provider>
+  );
 }
 
 export function useInitialAuthUser(): AuthenticatedUser | null {
-  return React.useContext(AuthUserContext);
+  const initialMe = React.useContext(MeInitialContext);
+  return initialMe?.user ?? null;
 }
 
 export function getUserInitials(name?: string | null, email?: string | null): string {

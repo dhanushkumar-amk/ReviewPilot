@@ -1,7 +1,10 @@
 import { betterAuth } from "better-auth";
+import { APIError } from "better-auth/api";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { organization } from "better-auth/plugins";
 import { prisma } from "./db.js";
 import { env, isGithubAuthEnabled, isGoogleAuthEnabled } from "./env.js";
+import { ensureUserHasWorkspace } from "./tenancy/personal-workspace.js";
 
 // TODO: Integrate a real transactional email provider (e.g., Resend or Postmark) before production.
 const hasConfiguredEmailProvider = false;
@@ -196,6 +199,12 @@ export const auth = betterAuth({
             email: user.email.trim().toLowerCase(),
           },
         }),
+        after: async (user) => {
+          await ensureUserHasWorkspace({
+            id: user.id,
+            name: user.name,
+          });
+        },
       },
       update: {
         before: async (user) => {
@@ -211,6 +220,55 @@ export const auth = betterAuth({
         },
       },
     },
+    session: {
+      create: {
+        before: async (session) => {
+          const currentActiveOrgId =
+            "activeOrganizationId" in session && typeof session.activeOrganizationId === "string"
+              ? session.activeOrganizationId
+              : null;
+
+          if (currentActiveOrgId) {
+            return;
+          }
+
+          const userRecord = await prisma.user.findUnique({
+            where: { id: session.userId },
+            select: { id: true, name: true },
+          });
+
+          if (!userRecord) {
+            return;
+          }
+
+          const activeOrganizationId = await ensureUserHasWorkspace(userRecord);
+
+          return {
+            data: {
+              ...session,
+              activeOrganizationId,
+            },
+          };
+        },
+      },
+    },
   },
+  plugins: [
+    organization({
+      allowUserToCreateOrganization: true,
+      creatorRole: "owner",
+      teams: {
+        enabled: false,
+      },
+      invitationLimit: 0,
+      organizationHooks: {
+        beforeCreateInvitation: async () => {
+          throw new APIError("FORBIDDEN", {
+            message: "Workspace invitations are not enabled yet.",
+          });
+        },
+      },
+    }),
+  ],
 });
 

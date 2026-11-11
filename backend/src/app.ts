@@ -11,6 +11,7 @@ import { devRoutes } from "./routes/dev.js";
 import { healthRoutes } from "./routes/health.js";
 import { authRoutes } from "./routes/auth.js";
 import { meRoutes } from "./routes/me.js";
+import { repositoryRoutes } from "./routes/repositories.js";
 
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9._-]{1,128}$/;
 
@@ -157,6 +158,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(healthRoutes);
   await app.register(authRoutes);
   await app.register(meRoutes);
+  await app.register(repositoryRoutes);
 
   await app.register(async (inngestScope) => {
     inngestScope.addHook("onRoute", (routeOptions) => {
