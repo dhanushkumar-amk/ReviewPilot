@@ -3,16 +3,13 @@
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
 import {
-  useReactTable,
+  useLegacyTable,
   getCoreRowModel,
   getSortedRowModel,
   getPaginationRowModel,
-  type SortingState,
-  type VisibilityState,
-  type RowSelectionState,
-  type ColumnDef,
-  flexRender,
-} from "@tanstack/react-table";
+  type LegacyColumnDef as ColumnDef,
+} from "@tanstack/react-table/legacy";
+import { flexRender } from "@tanstack/react-table";
 import { PageHeader } from "@/components/app-shell/page-header";
 import { EmptyState } from "@/components/app-shell/empty-state";
 import { MarkdownView } from "@/components/markdown-view";
@@ -185,7 +182,6 @@ function StatusIndicator({ status }: { status: FindingStatus }) {
             tabIndex={0}
           />
         }
-        nativeButton={false}
       >
         <span
           className={cn("size-2 rounded-full shrink-0", config.dotClass)}
@@ -197,6 +193,10 @@ function StatusIndicator({ status }: { status: FindingStatus }) {
     </Tooltip>
   );
 }
+
+type SortingState = Array<{ id: string; desc: boolean }>;
+type VisibilityState = Record<string, boolean>;
+type RowSelectionState = Record<string, true>;
 
 const pageSizeItems = [
   { label: "10", value: 10 },
@@ -330,7 +330,7 @@ function FindingsContent() {
     });
   };
 
-  const columns = React.useMemo<ColumnDef<Finding>[]>(
+  const columns = React.useMemo<ColumnDef<Finding, any>[]>(
     () => [
       {
         id: "select",
@@ -368,13 +368,6 @@ function FindingsContent() {
               type="button"
               className="flex items-center gap-1 font-semibold text-xs text-muted-foreground hover:text-foreground cursor-pointer select-none outline-none focus-visible:ring-1 focus-visible:ring-ring"
               onClick={column.getToggleSortingHandler()}
-              aria-sort={
-                sorted === "asc"
-                  ? "ascending"
-                  : sorted === "desc"
-                  ? "descending"
-                  : "none"
-              }
             >
               <span>Severity</span>
               {sorted === "asc" ? (
@@ -398,13 +391,6 @@ function FindingsContent() {
               type="button"
               className="flex items-center gap-1 font-semibold text-xs text-muted-foreground hover:text-foreground cursor-pointer select-none outline-none focus-visible:ring-1 focus-visible:ring-ring"
               onClick={column.getToggleSortingHandler()}
-              aria-sort={
-                sorted === "asc"
-                  ? "ascending"
-                  : sorted === "desc"
-                  ? "descending"
-                  : "none"
-              }
             >
               <span>Finding</span>
               {sorted === "asc" ? (
@@ -437,13 +423,6 @@ function FindingsContent() {
               type="button"
               className="flex items-center gap-1 font-semibold text-xs text-muted-foreground hover:text-foreground cursor-pointer select-none outline-none focus-visible:ring-1 focus-visible:ring-ring"
               onClick={column.getToggleSortingHandler()}
-              aria-sort={
-                sorted === "asc"
-                  ? "ascending"
-                  : sorted === "desc"
-                  ? "descending"
-                  : "none"
-              }
             >
               <span>File</span>
               {sorted === "asc" ? (
@@ -474,13 +453,6 @@ function FindingsContent() {
               type="button"
               className="flex items-center gap-1 font-semibold text-xs text-muted-foreground hover:text-foreground cursor-pointer select-none outline-none focus-visible:ring-1 focus-visible:ring-ring"
               onClick={column.getToggleSortingHandler()}
-              aria-sort={
-                sorted === "asc"
-                  ? "ascending"
-                  : sorted === "desc"
-                  ? "descending"
-                  : "none"
-              }
             >
               <span>Status</span>
               {sorted === "asc" ? (
@@ -564,7 +536,7 @@ function FindingsContent() {
     []
   );
 
-  const table = useReactTable({
+  const table = useLegacyTable({
     data: filteredFindings,
     columns,
     state: {
@@ -573,15 +545,29 @@ function FindingsContent() {
       rowSelection,
       pagination,
     },
-    onSortingChange: setSorting,
-    onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: setRowSelection,
-    onPaginationChange: setPagination,
+    onSortingChange: (updater: any) => {
+      setSorting(typeof updater === "function" ? updater(sorting) : updater);
+    },
+    onColumnVisibilityChange: (updater: any) => {
+      setColumnVisibility(
+        typeof updater === "function" ? updater(columnVisibility) : updater
+      );
+    },
+    onRowSelectionChange: (updater: any) => {
+      setRowSelection(
+        typeof updater === "function" ? updater(rowSelection) : updater
+      );
+    },
+    onPaginationChange: (updater: any) => {
+      setPagination(
+        typeof updater === "function" ? updater(pagination) : updater
+      );
+    },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     enableRowSelection: true,
-    getRowId: (row) => row.id,
+    getRowId: (row: Finding) => row.id,
   });
 
   const selectedCount = Object.keys(rowSelection).length;
@@ -1136,25 +1122,37 @@ function FindingsContent() {
                     key={headerGroup.id}
                     className="h-11 bg-muted/50 border-b border-border hover:bg-muted/50"
                   >
-                    {headerGroup.headers.map((header) => (
-                      <TableHead
-                        key={header.id}
-                        className={cn(
-                          "px-4 text-xs font-semibold text-muted-foreground",
-                          header.id === "select" && "w-12 text-center",
-                          header.id === "severity" && "w-28",
-                          header.id === "status" && "w-32",
-                          header.id === "actions" && "w-12 text-right"
-                        )}
-                      >
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
-                      </TableHead>
-                    ))}
+                    {headerGroup.headers.map((header) => {
+                      const sorted = header.column.getIsSorted();
+                      return (
+                        <TableHead
+                          key={header.id}
+                          aria-sort={
+                            header.column.getCanSort()
+                              ? sorted === "asc"
+                                ? "ascending"
+                                : sorted === "desc"
+                                ? "descending"
+                                : "none"
+                              : undefined
+                          }
+                          className={cn(
+                            "px-4 text-xs font-semibold text-muted-foreground",
+                            header.id === "select" && "w-12 text-center",
+                            header.id === "severity" && "w-28",
+                            header.id === "status" && "w-32",
+                            header.id === "actions" && "w-12 text-right"
+                          )}
+                        >
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                        </TableHead>
+                      );
+                    })}
                   </TableRow>
                 ))}
               </TableHeader>

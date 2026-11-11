@@ -41,6 +41,11 @@
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-link: var(--link);
+  --color-grid-line: var(--grid-line);
+  --color-scan-plane: var(--scan-plane);
+  --font-display: var(--font-schibsted);
+  --font-body: var(--font-instrument);
+  --font-code: var(--font-geist-mono-landing);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -81,6 +86,8 @@
   --success: #058378;
   --warning: #FFAC00;
   --link: #1D4ED8;
+  --grid-line: #E4E4E7;
+  --scan-plane: rgba(246, 130, 31, 0.14);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
