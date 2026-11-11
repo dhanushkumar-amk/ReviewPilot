@@ -85,7 +85,7 @@ export function MarketingNav() {
             href="/"
             className="flex items-center gap-2.5 text-foreground font-semibold text-sm tracking-tight outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
           >
-            <div className="size-6 rounded bg-foreground text-background flex items-center justify-center font-mono text-[11px] font-bold tracking-tight">
+            <div className="size-6 rounded bg-primary text-primary-foreground flex items-center justify-center font-mono text-[11px] font-bold tracking-tight">
               RP
             </div>
             <span className="font-heading font-semibold text-sm">ReviewPilot</span>

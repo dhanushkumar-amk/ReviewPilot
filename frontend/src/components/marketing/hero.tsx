@@ -3,24 +3,55 @@
 import * as React from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { BrowserFrame } from "./primitives/browser-frame";
-import { HeroPoster } from "./hero-poster";
-import { useMotionEnabled } from "@/src/lib/motion";
 import {
-  RotateCcwIcon,
   CheckCircle2Icon,
-  ShieldAlertIcon,
-  GitCommitIcon,
-  GitPullRequestIcon,
-  TerminalIcon,
-  LayersIcon,
   CheckIcon,
+  CopyIcon,
+  GitBranchIcon,
+  GitPullRequestIcon,
+  LayersIcon,
+  PlayIcon,
+  RotateCcwIcon,
+  ShieldAlertIcon,
+  ShieldCheckIcon,
+  TerminalIcon,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
-// Dynamically import 3D Hero Scene with ssr: false as secondary view
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  CodeBlock,
+  CodeBlockActions,
+  CodeBlockContent,
+  CodeBlockCopyButton,
+  CodeBlockHeader,
+  CodeBlockLine,
+  CodeBlockTitle,
+} from "@/components/ui/code-block";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  Trace,
+  TraceDescription,
+  TraceIcon,
+  TraceLine,
+  TraceTitle,
+} from "@/components/ui/trace";
+import { useMotionEnabled } from "@/src/lib/motion";
+import { HeroPoster } from "./hero-poster";
+
 const DynamicHeroScene = dynamic(
   () => import("./hero-scene").then((mod) => mod.HeroScene),
   {
@@ -29,71 +60,168 @@ const DynamicHeroScene = dynamic(
   }
 );
 
-// GitHub mark inline SVG
 function GithubMark() {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      className="size-4 shrink-0"
-      aria-hidden="true"
-    >
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
     </svg>
   );
 }
 
+type ScenarioId = "sqli" | "jwt" | "traversal";
+type WorkstationTab = "diff" | "trace" | "pr";
+
+interface HeroScenario {
+  id: ScenarioId;
+  shortLabel: string;
+  cwe: string;
+  cvss: string;
+  severity: "Critical" | "High";
+  title: string;
+  summary: string;
+  file: string;
+  prNumber: number;
+  branch: string;
+  contextBefore: string[];
+  removedLine: string;
+  addedLine: string;
+  contextAfter: string[];
+  suiteName: string;
+  suiteStats: string;
+}
+
+const HERO_SCENARIOS: Record<ScenarioId, HeroScenario> = {
+  sqli: {
+    id: "sqli",
+    shortLabel: "SQL Injection",
+    cwe: "CWE-89",
+    cvss: "CVSS 9.8",
+    severity: "Critical",
+    title: "Unparameterized SQL string interpolation",
+    summary:
+      "User input `id` interpolates directly into a raw SQL template instead of using bound parameters.",
+    file: "src/db/query-builder.ts",
+    prNumber: 482,
+    branch: "feat/search-filters",
+    contextBefore: [
+      "export async function findCustomerById(id: string) {",
+      "  const db = getDatabasePool();",
+    ],
+    removedLine: "  const query = `SELECT * FROM customers WHERE id = '${id}'`;",
+    addedLine: "  const query = Prisma.sql`SELECT * FROM customers WHERE id = ${id}`;",
+    contextAfter: ["  return db.query(query);", "}"],
+    suiteName: "vitest run src/db/query-builder.test.ts",
+    suiteStats: "14/14 assertions passed (412ms)",
+  },
+  jwt: {
+    id: "jwt",
+    shortLabel: "JWT Alg Bypass",
+    cwe: "CWE-347",
+    cvss: "CVSS 9.1",
+    severity: "Critical",
+    title: "JWT verifier accepts unsigned algorithm fallback",
+    summary:
+      "`jwtVerify` lacks an explicit `algorithms` allowlist, permitting `alg: none` tokens.",
+    file: "src/auth/jwt-verifier.ts",
+    prNumber: 119,
+    branch: "fix/session-rotation",
+    contextBefore: [
+      "export async function verifySessionJwt(token: string) {",
+      "  const publicKey = await getWorkspacePublicKey();",
+    ],
+    removedLine: "  return jwtVerify(token, publicKey);",
+    addedLine: "  return jwtVerify(token, publicKey, { algorithms: ['RS256'] });",
+    contextAfter: ["}"],
+    suiteName: "vitest run src/auth/jwt-verifier.test.ts",
+    suiteStats: "19/19 security specs passed (328ms)",
+  },
+  traversal: {
+    id: "traversal",
+    shortLabel: "Path Traversal",
+    cwe: "CWE-22",
+    cvss: "CVSS 8.6",
+    severity: "High",
+    title: "Asset route joins untrusted path without root guard",
+    summary:
+      "Normalized `../` segments escape `PUBLIC_ROOT` unless validated with `path.resolve` prefix guard.",
+    file: "src/api/static-assets.ts",
+    prNumber: 304,
+    branch: "chore/cdn-fallback",
+    contextBefore: [
+      "export function resolveAssetPath(requested: string) {",
+      "  const target = path.resolve(PUBLIC_ROOT, requested);",
+    ],
+    removedLine: "  return fs.createReadStream(target);",
+    addedLine:
+      "  if (!target.startsWith(`${PUBLIC_ROOT}${path.sep}`)) throw new ForbiddenError();",
+    contextAfter: ["  return fs.createReadStream(target);", "}"],
+    suiteName: "vitest run src/api/static-assets.test.ts",
+    suiteStats: "11/11 boundary checks passed (264ms)",
+  },
+};
+
 export function MarketingHero() {
   const motionEnabled = useMotionEnabled();
-  const [activeTab, setActiveTab] = React.useState<"push" | "scan" | "sandbox" | "pr">("scan");
   const [viewMode, setViewMode] = React.useState<"console" | "3d">("console");
+  const [scenarioId, setScenarioId] = React.useState<ScenarioId>("sqli");
+  const [activeTab, setActiveTab] = React.useState<WorkstationTab>("diff");
+  const [mergedIds, setMergedIds] = React.useState<Record<string, boolean>>({});
   const [replayKey, setReplayKey] = React.useState(0);
-  const [merged, setMerged] = React.useState(false);
-  const [isPaused, setIsPaused] = React.useState(false);
+  const [cliCopied, setCliCopied] = React.useState(false);
 
-  // Auto-cycle through the 4 stages unless paused by user interaction
+  const scenario = HERO_SCENARIOS[scenarioId];
+  const isMerged = Boolean(mergedIds[scenario.id]);
+
+  // Subtle auto-progression on initial load until user interacts
+  const [userInteracted, setUserInteracted] = React.useState(false);
   React.useEffect(() => {
-    if (!motionEnabled || isPaused || viewMode !== "console") return;
-
+    if (!motionEnabled || userInteracted || viewMode !== "console") return;
     const timer = setInterval(() => {
-      setActiveTab((prev) => {
-        if (prev === "push") return "scan";
-        if (prev === "scan") return "sandbox";
-        if (prev === "sandbox") return "pr";
-        return "push";
-      });
-    }, 4500);
-
+      setActiveTab((prev) =>
+        prev === "diff" ? "trace" : prev === "trace" ? "pr" : "diff"
+      );
+    }, 5200);
     return () => clearInterval(timer);
-  }, [motionEnabled, isPaused, viewMode]);
+  }, [motionEnabled, userInteracted, viewMode]);
 
-  const handleReplay = () => {
-    setMerged(false);
-    setActiveTab("push");
-    setReplayKey((k) => k + 1);
+  const handleCopyCli = () => {
+    navigator.clipboard
+      ?.writeText("npx @reviewpilot/cli scan --staged")
+      .then(() => {
+        setCliCopied(true);
+        setTimeout(() => setCliCopied(false), 1800);
+      })
+      .catch(() => {});
   };
 
-  const handleMerge = () => {
-    setMerged(true);
+  const handleSelectScenario = (nextId: ScenarioId) => {
+    setUserInteracted(true);
+    setViewMode("console");
+    setScenarioId(nextId);
+    setActiveTab("diff");
+  };
+
+  const handleResetDemo = () => {
+    setUserInteracted(true);
+    setMergedIds({});
+    setActiveTab("diff");
+    setReplayKey((k) => k + 1);
   };
 
   return (
     <section
       id="hero-section"
-      className="relative w-full overflow-hidden pt-8 pb-14 sm:pt-14 sm:pb-20 lg:pt-16 lg:pb-24 border-b border-border bg-background"
+      className="relative w-full overflow-hidden border-b border-border bg-background pt-10 pb-16 sm:pt-14 sm:pb-20 lg:pt-16 lg:pb-24"
     >
-      {/* Blueprint Grid Background Pattern */}
+      {/* Subtle Architectural Blueprint Grid */}
       <div
-        className="pointer-events-none absolute inset-0 z-0 select-none opacity-40 dark:opacity-25"
+        className="pointer-events-none absolute inset-0 z-0 opacity-35 dark:opacity-20"
         aria-hidden="true"
       >
-        <svg
-          className="w-full h-full absolute text-border"
-          xmlns="http://www.w3.org/2000/svg"
-        >
+        <svg className="h-full w-full text-border" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <pattern
-              id="blueprint-grid-hero"
+              id="hero-grid-pattern"
               width="32"
               height="32"
               patternUnits="userSpaceOnUse"
@@ -103,417 +231,454 @@ export function MarketingHero() {
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="1"
-                strokeDasharray="2 6"
               />
             </pattern>
           </defs>
-          <rect width="100%" height="100%" fill="url(#blueprint-grid-hero)" />
+          <rect width="100%" height="100%" fill="url(#hero-grid-pattern)" />
         </svg>
       </div>
 
-      <div className="relative z-10 max-w-[1200px] mx-auto px-4 sm:px-6">
-        {/* Top telemetry pill badge */}
-        <div className="flex justify-start mb-6">
-          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-mono text-muted-foreground shadow-none">
-            <span className="size-1.5 rounded-full bg-primary" />
-            <span className="text-foreground font-medium">ReviewPilot v2.4</span>
-            <span className="text-border" aria-hidden="true">|</span>
-            <span className="hidden sm:inline">Deterministic AST Scanner &amp; Sandbox Fixes</span>
-            <span className="sm:hidden">Autonomous Code Review</span>
-          </div>
-        </div>
+      <div className="relative z-10 mx-auto max-w-[1200px] px-4 sm:px-6">
+        <div className="grid grid-cols-1 items-start gap-10 lg:grid-cols-12 lg:gap-8">
+          {/* Left Column (5 cols): Editorial Headline, Actions & Metrics */}
+          <div className="flex min-w-0 flex-col gap-6 lg:col-span-5">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline" className="bg-card font-mono">
+                <span
+                  className="size-1.5 rounded-full bg-success"
+                  aria-hidden="true"
+                />
+                ReviewPilot v2.4
+              </Badge>
+              <Badge variant="secondary" className="font-mono">
+                Deterministic AST + Sandbox
+              </Badge>
+            </div>
 
-        {/* 12-Column Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-start">
-          {/* Left Column (5 Cols): Typography & CTAs */}
-          <div className="lg:col-span-5 flex flex-col gap-6 text-left">
-            <h1 className="font-display text-4xl sm:text-5xl lg:text-[3.5rem] font-bold tracking-[-0.03em] leading-[1.08] text-foreground">
-              Scan every push.{" "}
-              <span className="text-foreground">Fix vulnerabilities before they merge.</span>
-            </h1>
+            <div className="flex flex-col gap-4">
+              <h1 className="font-display text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
+                Scan every push.{" "}
+                <span className="text-primary">Block risky diffs</span> before
+                they merge.
+              </h1>
+              <p className="font-body text-base leading-relaxed text-muted-foreground sm:text-lg">
+                ReviewPilot inspects every commit with deterministic CWE rules,
+                proves each patch inside an isolated test sandbox, and opens a
+                clean pull request for your final sign-off.
+              </p>
+            </div>
 
-            <p className="font-body text-base sm:text-lg leading-relaxed text-muted-foreground">
-              ReviewPilot checks every commit against deterministic AST security rules,
-              runs tested patches inside an ephemeral sandbox, and opens a pull request.
-              You approve every line.
-            </p>
-
-            {/* Action Bar: Single Primary Orange Button + Secondary Outline Demo Button */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-1">
+            {/* Primary CTA + Secondary Workbench Link */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <Button
-                variant="default"
                 size="lg"
                 render={<Link href="/sign-up" />}
                 nativeButton={false}
-                className="h-11 px-5 text-sm font-semibold justify-center cursor-pointer"
               >
                 <GithubMark />
-                <span>Connect GitHub</span>
+                Connect GitHub
               </Button>
-
               <Button
                 variant="outline"
                 size="lg"
                 render={<Link href="/findings" />}
                 nativeButton={false}
-                className="h-11 px-4 text-sm font-medium justify-center cursor-pointer"
               >
-                <TerminalIcon className="size-4" />
-                <span>Explore findings</span>
+                <TerminalIcon data-icon="inline-start" />
+                Live workbench
+              </Button>
+            </div>
+
+            {/* Interactive CLI Quickstart Pill */}
+            <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2 font-mono text-xs">
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="text-primary">$</span>
+                <span className="truncate text-foreground">
+                  npx @reviewpilot/cli scan --staged
+                </span>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                aria-label="Copy CLI command"
+                onClick={handleCopyCli}
+              >
+                {cliCopied ? <CheckIcon /> : <CopyIcon />}
               </Button>
             </div>
 
             {/* Trust Assurances */}
-            <div className="pt-2 flex flex-col sm:flex-row sm:items-center gap-y-2 gap-x-5 text-xs text-muted-foreground font-mono">
-              <div className="flex items-center gap-1.5">
-                <CheckIcon className="size-3.5 text-success shrink-0" />
-                <span>Free for 1 repository</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <CheckIcon className="size-3.5 text-success shrink-0" />
-                <span>Zero config required</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <CheckIcon className="size-3.5 text-success shrink-0" />
-                <span>Human merge control</span>
-              </div>
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5">
+                <CheckCircle2Icon className="size-3.5 text-success" />
+                Free for 1 repository
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <CheckCircle2Icon className="size-3.5 text-success" />
+                Isolated test sandboxes
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <CheckCircle2Icon className="size-3.5 text-success" />
+                Human merge gate
+              </span>
+            </div>
+
+            {/* Compact Telemetry Metrics Strip */}
+            <div className="grid grid-cols-3 gap-3 pt-1">
+              <Card size="sm">
+                <CardHeader>
+                  <CardDescription className="text-xs">Ingest</CardDescription>
+                  <CardTitle className="font-mono text-lg tabular-nums">
+                    &lt; 20ms
+                  </CardTitle>
+                </CardHeader>
+              </Card>
+              <Card size="sm">
+                <CardHeader>
+                  <CardDescription className="text-xs">Tests</CardDescription>
+                  <CardTitle className="font-mono text-lg text-success tabular-nums">
+                    100%
+                  </CardTitle>
+                </CardHeader>
+              </Card>
+              <Card size="sm">
+                <CardHeader>
+                  <CardDescription className="text-xs">Auto-merge</CardDescription>
+                  <CardTitle className="font-mono text-lg tabular-nums">
+                    Never
+                  </CardTitle>
+                </CardHeader>
+              </Card>
             </div>
           </div>
 
-          {/* Right Column (7 Cols): Interactive Developer Workstation Console */}
+          {/* Right Column (7 cols): Interactive PR Security Workstation */}
           <div
-            className="lg:col-span-7 relative w-full flex flex-col gap-3"
-            onMouseEnter={() => setIsPaused(true)}
-            onMouseLeave={() => setIsPaused(false)}
+            className="flex min-w-0 flex-col gap-3 lg:col-span-7"
+            onMouseEnter={() => setUserInteracted(true)}
           >
-            {/* View switcher & Replay control header */}
-            <div className="flex items-center justify-between px-1">
-              {/* Stage switcher pills */}
-              <div className="flex items-center gap-1 bg-muted/60 p-0.5 rounded-md border border-border text-[11px] font-mono">
-                {(
-                  [
-                    { id: "push", label: "1. Push" },
-                    { id: "scan", label: "2. Scan & Fix" },
-                    { id: "sandbox", label: "3. Sandbox" },
-                    { id: "pr", label: "4. Pull Request" },
-                  ] as const
-                ).map((tab) => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => {
-                      setViewMode("console");
-                      setActiveTab(tab.id);
-                    }}
-                    className={cn(
-                      "px-2.5 py-1 rounded transition-colors cursor-pointer",
-                      viewMode === "console" && activeTab === tab.id
-                        ? "bg-card text-foreground font-semibold shadow-xs"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
+            {/* Top Controls: Scenario Switcher & 3D Topology Toggle */}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <ToggleGroup
+                variant="outline"
+                size="sm"
+                value={[scenarioId]}
+                onValueChange={(next) => {
+                  if (next[0]) handleSelectScenario(next[0] as ScenarioId);
+                }}
+              >
+                <ToggleGroupItem value="sqli">SQL Injection</ToggleGroupItem>
+                <ToggleGroupItem value="jwt">JWT Alg Bypass</ToggleGroupItem>
+                <ToggleGroupItem value="traversal">Path Traversal</ToggleGroupItem>
+              </ToggleGroup>
 
-              {/* View mode toggle (Console vs 3D) & Replay */}
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setViewMode(viewMode === "console" ? "3d" : "console")}
-                  className="hidden sm:inline-flex items-center gap-1.5 text-xs font-mono text-muted-foreground hover:text-foreground transition-colors cursor-pointer px-2 py-1 rounded border border-border bg-card"
-                  title="Toggle 3D isometric diagram"
+              <div className="flex items-center gap-1.5">
+                <ToggleGroup
+                  variant="outline"
+                  size="sm"
+                  value={[viewMode]}
+                  onValueChange={(next) => {
+                    if (next[0]) {
+                      setUserInteracted(true);
+                      setViewMode(next[0] as "console" | "3d");
+                    }
+                  }}
                 >
-                  <LayersIcon className="size-3" />
-                  <span>{viewMode === "console" ? "3D View" : "Console"}</span>
-                </button>
+                  <ToggleGroupItem value="console">Workstation</ToggleGroupItem>
+                  <ToggleGroupItem value="3d">
+                    <LayersIcon />
+                    <span className="hidden sm:inline">3D View</span>
+                  </ToggleGroupItem>
+                </ToggleGroup>
 
-                <button
+                <Button
                   type="button"
-                  onClick={handleReplay}
-                  className="inline-flex items-center gap-1 text-xs font-mono text-muted-foreground hover:text-foreground transition-colors cursor-pointer px-2 py-1 rounded hover:bg-muted"
-                  aria-label="Replay scan sequence"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Reset hero workstation demo"
+                  onClick={handleResetDemo}
                 >
-                  <RotateCcwIcon className="size-3" />
-                  <span className="hidden sm:inline">Replay</span>
-                </button>
+                  <RotateCcwIcon />
+                </Button>
               </div>
             </div>
 
-            {/* Core Console Container */}
             {viewMode === "3d" ? (
-              <div className="w-full rounded-lg border border-border bg-card overflow-hidden min-h-[420px] flex items-center justify-center">
-                <DynamicHeroScene replayKey={replayKey} />
-              </div>
+              <Card className="overflow-hidden p-0">
+                <CardHeader className="border-b bg-muted/30">
+                  <CardTitle className="font-mono text-xs">
+                    3D Repository AST Scan Topology
+                  </CardTitle>
+                  <CardDescription className="font-mono text-xs">
+                    Live spatial sweep across 6 modules
+                  </CardDescription>
+                  <CardAction>
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      onClick={() => setViewMode("console")}
+                    >
+                      Back to workstation
+                    </Button>
+                  </CardAction>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="flex min-h-[420px] items-center justify-center">
+                    <DynamicHeroScene replayKey={replayKey} />
+                  </div>
+                </CardContent>
+              </Card>
             ) : (
-              <BrowserFrame
-                url="github.com/acme-corp/api-gateway/pull/128"
-                className="w-full shadow-none bg-card"
-              >
-                {/* Console Internal Header */}
-                <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-muted/20 text-xs font-mono">
-                  <div className="flex items-center gap-2">
-                    <span className="size-2 rounded-full bg-success" />
-                    <span className="font-semibold text-foreground">
-                      api-gateway <span className="text-muted-foreground font-normal">/ main</span>
-                    </span>
-                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
-                      SHA 9f2c81a
-                    </Badge>
-                  </div>
-                  <span className="text-muted-foreground text-[11px]">
-                    Runtime: 340ms
-                  </span>
-                </div>
-
-                {/* TAB 1: PUSH EVENT */}
-                {activeTab === "push" && (
-                  <div className="p-5 flex flex-col gap-4 animate-in fade-in-50 duration-200">
-                    <div className="rounded-md border border-border bg-muted/40 p-3 font-mono text-xs">
-                      <div className="text-muted-foreground mb-1">
-                        $ git push origin main
-                      </div>
-                      <div className="text-foreground">
-                        Enumerating objects: 7, done.
-                      </div>
-                      <div className="text-foreground">
-                        To github.com:acme-corp/api-gateway.git
-                      </div>
-                      <div className="text-success">
-                        &nbsp;&nbsp;8a3b10c..9f2c81a main -&gt; main
-                      </div>
+              <Card className="overflow-hidden">
+                <CardHeader className="border-b bg-muted/30">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 font-mono text-xs">
+                      <GitBranchIcon className="size-3.5 text-muted-foreground" />
+                      <span className="font-semibold text-foreground">
+                        acme-corp/api-gateway
+                      </span>
+                      <span className="text-muted-foreground">
+                        · {scenario.branch}
+                      </span>
                     </div>
-
-                    <div className="rounded-md border border-border bg-card p-4 flex flex-col gap-2.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2">
-                          <GitCommitIcon className="size-4 text-foreground" />
-                          <span className="font-semibold text-foreground">
-                            feat: add parameterized query filtering
-                          </span>
-                        </div>
-                        <span className="font-mono text-muted-foreground text-[11px]">
-                          +2 -1 lines
-                        </span>
-                      </div>
-                      <div className="text-xs text-muted-foreground font-mono flex items-center gap-3">
-                        <span>Author: alex@acme.dev</span>
-                        <span>•</span>
-                        <span>src/db/query-builder.ts</span>
-                      </div>
-                      <div className="mt-2 pt-2 border-t border-border flex items-center justify-between text-[11px] font-mono">
-                        <span className="text-success flex items-center gap-1.5">
-                          <CheckCircle2Icon className="size-3.5" />
-                          Webhook acknowledged &amp; worker assigned
-                        </span>
-                        <span className="text-muted-foreground">18ms</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* TAB 2: AST SCAN & FIX (Default Primary View) */}
-                {activeTab === "scan" && (
-                  <div className="p-4 sm:p-5 flex flex-col gap-3.5 animate-in fade-in-50 duration-200 font-mono text-xs">
-                    {/* Vulnerability Alert Box */}
-                    <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-2.5">
-                        <ShieldAlertIcon className="size-4 text-destructive shrink-0 mt-0.5" />
-                        <div className="flex flex-col gap-0.5">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-destructive">
-                              CRITICAL
-                            </span>
-                            <span className="text-foreground font-semibold">
-                              CWE-89: SQL Injection in dynamic query
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-muted-foreground font-sans">
-                            Direct template literal interpolation into raw query builder bypasses driver escaping.
-                          </p>
-                        </div>
-                      </div>
-                      <Badge variant="outline" className="border-destructive/40 text-destructive text-[10px] shrink-0">
-                        CVSS 9.8
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="font-mono">
+                        PR #{scenario.prNumber}
+                      </Badge>
+                      <Badge
+                        variant={
+                          isMerged
+                            ? "success"
+                            : scenario.severity === "Critical"
+                            ? "destructive"
+                            : "default"
+                        }
+                      >
+                        {isMerged ? "Merged" : `${scenario.cwe} Blocked`}
                       </Badge>
                     </div>
-
-                    {/* Code Diff Box with Line Numbers */}
-                    <div className="rounded-md border border-border bg-background overflow-hidden text-[12px] leading-relaxed">
-                      <div className="flex items-center justify-between px-3 py-1.5 border-b border-border bg-muted/40 text-[11px] text-muted-foreground">
-                        <span>src/db/query-builder.ts</span>
-                        <span>AST rule: semgrep.sqli-raw-query</span>
-                      </div>
-                      <div className="p-3 flex flex-col font-mono text-[11px] sm:text-xs">
-                        <div className="text-muted-foreground/60 select-none">
-                          <span className="inline-block w-6 text-right mr-3 text-muted-foreground/40">40</span>
-                          <span>export async function findUserById(id: string) &#123;</span>
-                        </div>
-                        <div className="text-muted-foreground/60 select-none">
-                          <span className="inline-block w-6 text-right mr-3 text-muted-foreground/40">41</span>
-                          <span>&nbsp;&nbsp;const pool = getDatabasePool();</span>
-                        </div>
-                        {/* Red removed vulnerable line */}
-                        <div className="bg-destructive/15 text-destructive -mx-3 px-3 py-0.5 flex items-center">
-                          <span className="inline-block w-6 text-right mr-3 text-destructive/70 select-none">42</span>
-                          <span className="font-semibold">-&nbsp;&nbsp;const q = `SELECT * FROM users WHERE id = $&#123;id&#125;`;</span>
-                        </div>
-                        {/* Green added safe line */}
-                        <div className="bg-success/15 text-success -mx-3 px-3 py-0.5 flex items-center">
-                          <span className="inline-block w-6 text-right mr-3 text-success/70 select-none">42</span>
-                          <span className="font-semibold">+&nbsp;&nbsp;const q = sql`SELECT * FROM users WHERE id = $&#123;id&#125;`;</span>
-                        </div>
-                        <div className="text-muted-foreground/60 select-none">
-                          <span className="inline-block w-6 text-right mr-3 text-muted-foreground/40">43</span>
-                          <span>&nbsp;&nbsp;return await pool.execute(q);</span>
-                        </div>
-                        <div className="text-muted-foreground/60 select-none">
-                          <span className="inline-block w-6 text-right mr-3 text-muted-foreground/40">44</span>
-                          <span>&#125;</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Bottom action prompt */}
-                    <div className="flex items-center justify-between pt-1">
-                      <span className="text-[11px] text-muted-foreground">
-                        Deterministic patch generated by ReviewPilot AST engine
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab("sandbox")}
-                        className="text-xs font-semibold text-primary hover:underline cursor-pointer"
-                      >
-                        Run sandbox test &rarr;
-                      </button>
-                    </div>
                   </div>
-                )}
+                  <CardTitle className="sr-only">
+                    {scenario.title}
+                  </CardTitle>
+                  <CardDescription className="sr-only">
+                    {scenario.summary}
+                  </CardDescription>
+                </CardHeader>
 
-                {/* TAB 3: EPHEMERAL SANDBOX TEST */}
-                {activeTab === "sandbox" && (
-                  <div className="p-5 flex flex-col gap-4 animate-in fade-in-50 duration-200 font-mono text-xs">
-                    <div className="rounded-md border border-border bg-card p-3 flex flex-col gap-1.5">
-                      <div className="flex items-center justify-between text-muted-foreground text-[11px] border-b border-border pb-1.5">
-                        <span>Sandbox container: ephem-runner-492</span>
-                        <span className="text-success font-semibold">Active sandbox</span>
-                      </div>
-                      <div className="text-muted-foreground text-[11px]">
-                        Target: <span className="text-foreground">node:20-alpine</span> • Isolated environment
-                      </div>
-                    </div>
-
-                    <div className="rounded-md border border-border bg-muted/40 p-3.5 flex flex-col gap-2">
-                      <div className="flex items-center gap-2 text-success">
-                        <CheckCircle2Icon className="size-4 shrink-0" />
-                        <span>Applying AST patch to query-builder.ts (0 errors)</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-success">
-                        <CheckCircle2Icon className="size-4 shrink-0" />
-                        <span>eslint --max-warnings=0: PASSED (112ms)</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-success">
-                        <CheckCircle2Icon className="size-4 shrink-0" />
-                        <span>tsc --noEmit: PASSED (240ms)</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-success font-semibold">
-                        <CheckCircle2Icon className="size-4 shrink-0" />
-                        <span>npm test: 14/14 test suites PASSED (680ms)</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-1">
-                      <span className="text-success text-xs font-semibold flex items-center gap-1.5">
-                        <span className="size-2 rounded-full bg-success" />
-                        Sandbox verified safe to merge
+                <CardContent className="pt-4">
+                  <Tabs
+                    value={activeTab}
+                    onValueChange={(value) => {
+                      setUserInteracted(true);
+                      setActiveTab(value as WorkstationTab);
+                    }}
+                    className="gap-4"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <TabsList>
+                        <TabsTrigger value="diff">1. Diff &amp; Patch</TabsTrigger>
+                        <TabsTrigger value="trace">
+                          2. Sandbox Trace
+                        </TabsTrigger>
+                        <TabsTrigger value="pr">3. PR Gate</TabsTrigger>
+                      </TabsList>
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {scenario.cvss}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab("pr")}
-                        className="text-xs font-semibold text-primary hover:underline cursor-pointer"
-                      >
-                        Inspect PR preview &rarr;
-                      </button>
                     </div>
-                  </div>
-                )}
 
-                {/* TAB 4: GITHUB PULL REQUEST */}
-                {activeTab === "pr" && (
-                  <div className="p-5 flex flex-col gap-4 animate-in fade-in-50 duration-200">
-                    <div className="rounded-md border border-border bg-card p-4 flex flex-col gap-3">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border pb-3">
-                        <div className="flex items-center gap-2.5">
-                          <span className="rounded bg-success/15 px-2 py-0.5 text-xs font-mono font-semibold text-success">
-                            {merged ? "MERGED" : "OPEN"}
+                    {/* TAB 1: DIFF & PATCH */}
+                    <TabsContent value="diff" className="flex flex-col gap-3.5">
+                      <Alert variant="destructive">
+                        <ShieldAlertIcon />
+                        <AlertTitle>{scenario.title}</AlertTitle>
+                        <AlertDescription>{scenario.summary}</AlertDescription>
+                      </Alert>
+
+                      <CodeBlock size="sm">
+                        <CodeBlockHeader>
+                          <CodeBlockTitle className="font-mono">
+                            {scenario.file}
+                          </CodeBlockTitle>
+                          <CodeBlockActions>
+                            <CodeBlockCopyButton value={scenario.addedLine} />
+                          </CodeBlockActions>
+                        </CodeBlockHeader>
+                        <CodeBlockContent>
+                          {scenario.contextBefore.map((line) => (
+                            <CodeBlockLine key={line}>{line}</CodeBlockLine>
+                          ))}
+                          <CodeBlockLine variant="removed">
+                            {scenario.removedLine}
+                          </CodeBlockLine>
+                          <CodeBlockLine className="bg-success/10 text-success after:text-success after:content-['+']">
+                            {scenario.addedLine}
+                          </CodeBlockLine>
+                          {scenario.contextAfter.map((line) => (
+                            <CodeBlockLine key={line}>{line}</CodeBlockLine>
+                          ))}
+                        </CodeBlockContent>
+                      </CodeBlock>
+
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs text-muted-foreground">
+                          Deterministic patch verified against TypeScript AST
+                        </span>
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setUserInteracted(true);
+                            setActiveTab("trace");
+                          }}
+                        >
+                          <PlayIcon data-icon="inline-start" />
+                          Run sandbox tests
+                        </Button>
+                      </div>
+                    </TabsContent>
+
+                    {/* TAB 2: SANDBOX TRACE */}
+                    <TabsContent value="trace" className="flex flex-col gap-4">
+                      <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-3.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-mono font-medium text-foreground">
+                            Container: ephem-runner-492 (zero egress)
                           </span>
-                          <span className="font-heading font-semibold text-sm text-foreground">
-                            PR #128: fix(security): sanitize dynamic SQL query
-                          </span>
+                          <Badge variant="success">Verified</Badge>
                         </div>
-                        <span className="font-mono text-xs text-muted-foreground">
-                          ReviewPilot[bot]
-                        </span>
+                        <Progress value={100} />
                       </div>
 
-                      <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
-                        <span className="rounded bg-muted px-1.5 py-0.5 text-foreground">
-                          reviewpilot:fix-cwe-89
-                        </span>
-                        <span>into</span>
-                        <span className="rounded bg-muted px-1.5 py-0.5 text-foreground">
-                          main
-                        </span>
-                      </div>
+                      <Trace>
+                        <TraceLine>
+                          <TraceIcon className="text-success">
+                            <CheckCircle2Icon />
+                          </TraceIcon>
+                          <TraceTitle>
+                            Applied AST patch to {scenario.file}
+                          </TraceTitle>
+                          <TraceDescription>12ms</TraceDescription>
+                        </TraceLine>
+                        <TraceLine>
+                          <TraceIcon className="text-success">
+                            <CheckCircle2Icon />
+                          </TraceIcon>
+                          <TraceTitle>
+                            Re-ran {scenario.cwe} static taint check (0 violations)
+                          </TraceTitle>
+                          <TraceDescription>84ms</TraceDescription>
+                        </TraceLine>
+                        <TraceLine>
+                          <TraceIcon className="text-success">
+                            <CheckCircle2Icon />
+                          </TraceIcon>
+                          <TraceTitle>
+                            tsc --noEmit &amp; eslint --max-warnings=0
+                          </TraceTitle>
+                          <TraceDescription>195ms</TraceDescription>
+                        </TraceLine>
+                        <TraceLine>
+                          <TraceIcon className="text-success">
+                            <CheckCircle2Icon />
+                          </TraceIcon>
+                          <TraceTitle>{scenario.suiteName}</TraceTitle>
+                          <TraceDescription>
+                            {scenario.suiteStats}
+                          </TraceDescription>
+                        </TraceLine>
+                      </Trace>
 
-                      <div className="rounded border border-border bg-muted/30 p-2.5 flex items-center justify-between text-xs font-mono">
-                        <div className="flex items-center gap-2 text-success">
-                          <CheckCircle2Icon className="size-3.5" />
-                          <span>All 3 checks passed (AST, Lint, Unit Tests)</span>
-                        </div>
-                        <span className="text-muted-foreground">1 file changed</span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-success">
+                          <ShieldCheckIcon className="size-4" />
+                          Safe to propose pull request
+                        </span>
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setUserInteracted(true);
+                            setActiveTab("pr");
+                          }}
+                        >
+                          Inspect PR #{scenario.prNumber}
+                        </Button>
                       </div>
+                    </TabsContent>
 
-                      {/* Interactive Merge Button */}
-                      <div className="pt-1 flex items-center justify-between">
-                        {merged ? (
-                          <div className="inline-flex items-center gap-2 rounded-md bg-success/15 text-success px-4 py-2 text-xs font-mono font-semibold">
-                            <CheckCircle2Icon className="size-4" />
-                            <span>Merged into main via commit c8e12b</span>
+                    {/* TAB 3: PR GATE */}
+                    <TabsContent value="pr" className="flex flex-col gap-4">
+                      <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/20 p-4">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="success">
+                              {isMerged ? "MERGED" : "READY"}
+                            </Badge>
+                            <span className="font-heading text-sm font-semibold text-foreground">
+                              fix({scenario.cwe}): {scenario.title}
+                            </span>
                           </div>
-                        ) : (
-                          <Button
-                            variant="default"
-                            size="sm"
-                            onClick={handleMerge}
-                            className="font-medium cursor-pointer"
-                          >
-                            <GitPullRequestIcon data-icon="inline-start" />
-                            <span>Approve &amp; Merge pull request</span>
-                          </Button>
-                        )}
+                          <span className="font-mono text-xs text-muted-foreground">
+                            ReviewPilot[bot]
+                          </span>
+                        </div>
 
-                        <span className="text-xs text-muted-foreground font-mono">
-                          {merged ? "Production safe" : "Awaiting your click"}
-                        </span>
+                        <Separator />
+
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                          <span className="inline-flex items-center gap-1.5 text-success">
+                            <CheckCircle2Icon className="size-3.5" />
+                            AST, ESLint, TypeScript, and unit tests all passing
+                          </span>
+                          <span className="font-mono text-muted-foreground">
+                            1 file ·{" "}
+                            <span className="text-success">+1</span>{" "}
+                            <span className="text-destructive">-1</span>
+                          </span>
+                        </div>
+
+                        <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                          {isMerged ? (
+                            <Badge variant="success">
+                              <CheckCircle2Icon data-icon="inline-start" />
+                              Merged into main
+                            </Badge>
+                          ) : (
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                setUserInteracted(true);
+                                setMergedIds((prev) => ({
+                                  ...prev,
+                                  [scenario.id]: true,
+                                }));
+                              }}
+                            >
+                              <GitPullRequestIcon data-icon="inline-start" />
+                              Approve &amp; Merge PR #{scenario.prNumber}
+                            </Button>
+                          )}
+                          <span className="font-mono text-xs text-muted-foreground">
+                            {isMerged
+                              ? "Production branch protected"
+                              : "Awaiting human review"}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                )}
+                    </TabsContent>
+                  </Tabs>
+                </CardContent>
 
-                {/* Console Footer Telemetry Bar */}
-                <div className="px-4 py-2 border-t border-border bg-muted/40 flex items-center justify-between text-[11px] font-mono text-muted-foreground">
-                  <div className="flex items-center gap-3">
-                    <span>Engine: AST + Semgrep 1.62</span>
-                    <span className="hidden sm:inline">•</span>
-                    <span className="hidden sm:inline">Sandbox: Ephemeral 256MB</span>
-                  </div>
-                  <span className="text-foreground font-medium">
-                    Stage {activeTab === "push" ? "1" : activeTab === "scan" ? "2" : activeTab === "sandbox" ? "3" : "4"} of 4
+                <CardFooter className="justify-between text-xs text-muted-foreground">
+                  <span className="font-mono">
+                    Semgrep + TypeScript AST + Gitleaks
                   </span>
-                </div>
-              </BrowserFrame>
+                  <span className="font-mono">
+                    Zero source retention
+                  </span>
+                </CardFooter>
+              </Card>
             )}
           </div>
         </div>

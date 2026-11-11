@@ -7,7 +7,7 @@ export function MarketingFooter() {
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
         {/* Brand */}
         <div className="flex items-center gap-2 text-foreground font-semibold">
-          <div className="size-5 rounded bg-foreground text-background flex items-center justify-center font-mono text-[10px] font-bold">
+          <div className="size-5 rounded bg-primary text-primary-foreground flex items-center justify-center font-mono text-[10px] font-bold">
             RP
           </div>
           <span className="font-heading">ReviewPilot</span>

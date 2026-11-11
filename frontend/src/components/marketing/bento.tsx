@@ -68,10 +68,10 @@ const SAMPLE_FINDINGS: FindingRowData[] = [
 ];
 
 const SEVERITY_CHART_DATA = [
-  { name: "Critical", count: 3, fill: "#CF222E" },
-  { name: "High", count: 5, fill: "#FFAC00" },
-  { name: "Medium", count: 10, fill: "#52525B" },
-  { name: "Low", count: 24, fill: "#A1A1AA" },
+  { name: "Critical", count: 3, fill: "var(--destructive)" },
+  { name: "High", count: 5, fill: "var(--primary)" },
+  { name: "Medium", count: 10, fill: "var(--muted-foreground)" },
+  { name: "Low", count: 24, fill: "var(--border)" },
 ];
 
 export function MarketingBento() {
