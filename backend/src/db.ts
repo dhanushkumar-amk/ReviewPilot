@@ -1,26 +1,40 @@
+import pg from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { env } from "./env.js";
 import { PrismaClient } from "./generated/prisma/client.js";
 
-const DB_CHECK_TIMEOUT_MS = 5000;
-const DB_POOL_CONNECTION_TIMEOUT_MS = 15_000;
+const DB_CHECK_TIMEOUT_MS = 10_000;
+const DB_POOL_CONNECTION_TIMEOUT_MS = 30_000;
 
-const adapter = new PrismaPg(
-  {
-    connectionString: env.DATABASE_URL,
-    connectionTimeoutMillis: DB_POOL_CONNECTION_TIMEOUT_MS,
-    idleTimeoutMillis: 30_000,
-    keepAlive: true,
-  },
-  {
-    onPoolError: () => {
-      // Prevent unhandled pool error events from crashing the process
-    },
-    onConnectionError: () => {
-      // Errors surface via active query promises without leaking connection strings
-    },
+export const pool = new pg.Pool({
+  connectionString: env.DATABASE_URL,
+  connectionTimeoutMillis: DB_POOL_CONNECTION_TIMEOUT_MS,
+  idleTimeoutMillis: 10_000,
+  max: 10,
+  keepAlive: true,
+  keepAliveInitialDelayMillis: 10_000,
+});
+
+pool.on("error", (err) => {
+  // Gracefully handle dropped/terminated idle connections from Neon serverless compute
+  // without allowing unhandled exceptions to crash the process or leave dead connections in pool
+  if (env.NODE_ENV !== "test") {
+    console.warn("[Database Pool] Idle client terminated by server:", err.message);
   }
-);
+});
+
+const adapter = new PrismaPg(pool, {
+  onPoolError: (err) => {
+    if (env.NODE_ENV !== "test") {
+      console.warn("[Prisma Adapter] Pool error:", err.message);
+    }
+  },
+  onConnectionError: (err) => {
+    if (env.NODE_ENV !== "test") {
+      console.warn("[Prisma Adapter] Connection error:", err.message);
+    }
+  },
+});
 
 export const prisma = new PrismaClient({ adapter });
 
