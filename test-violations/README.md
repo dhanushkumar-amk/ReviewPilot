@@ -8,3 +8,4 @@ This folder contains intentional test violation files for verifying ReviewPilot'
 - `timing-attack.js`: `security/detect-possible-timing-attacks` (MEDIUM severity)
 - `unsafe-regex.js`: `security/detect-unsafe-regex` (MEDIUM severity)
 - `bugs.js`: `valid-typeof`, `use-isnan`, `no-dupe-keys`, `no-unreachable`, `no-unsafe-finally` (MEDIUM severity bugs)
+

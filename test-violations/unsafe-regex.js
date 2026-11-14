@@ -4,3 +4,4 @@ function getEmailMatcher() {
 }
 
 module.exports = { getEmailMatcher };
+
