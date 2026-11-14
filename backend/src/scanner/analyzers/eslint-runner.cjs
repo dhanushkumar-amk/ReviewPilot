@@ -54,6 +54,20 @@ async function run() {
           "security/detect-disable-mustache-escape": "error",
           "security/detect-object-injection": "off",
 
+          // Additional Security & Injection Rules
+          "no-implied-eval": "error",
+          "no-new-func": "error",
+          "no-script-url": "error",
+          "no-proto": "error",
+
+          // Async & Logic Bug Rules
+          "no-async-promise-executor": "error",
+          "no-constant-binary-expression": "error",
+          "no-loss-of-precision": "error",
+          "no-compare-neg-zero": "error",
+          "no-unsafe-negation": "error",
+          "no-fallthrough": "error",
+
           // Bug Rules
           "no-undef": "off",
           "no-unreachable": "error",

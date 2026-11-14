@@ -36,6 +36,25 @@ function mapEslintSeverityAndCategory(ruleId: string): {
     return { severity: "LOW", category: "SECURITY" };
   }
 
+  // Additional Security rules
+  if (
+    ruleId === "no-implied-eval" ||
+    ruleId === "no-new-func" ||
+    ruleId === "no-script-url" ||
+    ruleId === "no-proto"
+  ) {
+    return { severity: "HIGH", category: "SECURITY" };
+  }
+
+  // Critical Logic / Async Bug rules
+  if (
+    ruleId === "no-async-promise-executor" ||
+    ruleId === "no-constant-binary-expression" ||
+    ruleId === "no-loss-of-precision"
+  ) {
+    return { severity: "HIGH", category: "BUG" };
+  }
+
   // Bug rules (@eslint/js)
   return { severity: "MEDIUM", category: "BUG" };
 }

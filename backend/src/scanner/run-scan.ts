@@ -6,6 +6,7 @@ import { prisma } from "../db.js";
 import { env } from "../env.js";
 import { runEslintAnalyzer } from "./analyzers/eslint.js";
 import { runGitleaksAnalyzer } from "./analyzers/gitleaks.js";
+import { runHygieneAnalyzer } from "./analyzers/hygiene.js";
 import { runSemgrepAnalyzer } from "./analyzers/semgrep.js";
 import { downloadAndExtract } from "./archive.js";
 import type { FindingSeverity, FindingTool, NormalizedFinding } from "./normalize.js";
@@ -152,7 +153,7 @@ export async function runScan(ctx: ScanContext): Promise<ScanRunSummary> {
     const completedTools: FindingTool[] = [];
 
     // Run analyzers concurrently with Promise.allSettled
-    const [eslintRes, gitleaksRes, semgrepRes] = await Promise.allSettled([
+    const [eslintRes, gitleaksRes, semgrepRes, hygieneRes] = await Promise.allSettled([
       (async () => {
         const start = Date.now();
         const res = await runEslintAnalyzer(repoExtractDir, scanTempDir);
@@ -170,6 +171,11 @@ export async function runScan(ctx: ScanContext): Promise<ScanRunSummary> {
           scanTempDir,
           env.SCAN_MAX_FILE_KB || 512,
         );
+        return { ...res, durationMs: Date.now() - start };
+      })(),
+      (async () => {
+        const start = Date.now();
+        const res = await runHygieneAnalyzer(repoExtractDir);
         return { ...res, durationMs: Date.now() - start };
       })(),
     ]);
@@ -270,6 +276,11 @@ export async function runScan(ctx: ScanContext): Promise<ScanRunSummary> {
         findings: 0,
         note: "analyzer error",
       });
+    }
+
+    // Process Repo Hygiene findings
+    if (hygieneRes.status === "fulfilled" && hygieneRes.value.findings.length > 0) {
+      allFindings.push(...hygieneRes.value.findings);
     }
 
     // Check if every available analyzer failed

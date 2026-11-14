@@ -29,6 +29,20 @@ const KNOWN_RULE_TITLES: Record<string, string> = {
   "security/detect-buffer-noassert": "Use of Buffer method with noAssert flag",
   "security/detect-disable-mustache-escape": "Disabled template escaping",
   
+  // Additional Security & Injection rules
+  "no-implied-eval": "Use of implied eval in timer or callback",
+  "no-new-func": "Dynamic Function constructor invocation",
+  "no-script-url": "Use of javascript: URL protocol",
+  "no-proto": "Use of deprecated __proto__ property",
+
+  // Async & Logic Bug rules
+  "no-async-promise-executor": "Async function passed to Promise executor",
+  "no-constant-binary-expression": "Constant binary expression always evaluates to the same value",
+  "no-loss-of-precision": "Numeric literal causes precision loss",
+  "no-compare-neg-zero": "Comparison against negative zero (-0)",
+  "no-unsafe-negation": "Unexpected negation of left operand in relational expression",
+  "no-fallthrough": "Unintentional fallthrough in switch case statement",
+
   // ESLint Bug rules
   "no-unreachable": "Unreachable code detected",
   "no-dupe-keys": "Duplicate key in object literal",
