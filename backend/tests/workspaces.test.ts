@@ -149,10 +149,23 @@ describe("workspaces and multi-tenant isolation", () => {
     });
     expect(membershipCount).toBe(1);
 
-    // Seed repositories for Bob's workspace and two for Alice's workspace
+    // Seed installation and repositories for Bob's workspace and two for Alice's workspace
+    const bobInstallation = await prisma.githubInstallation.create({
+      data: {
+        workspaceId: bobMe.activeWorkspace!.id,
+        installationId: BigInt(900001 + Math.floor(Math.random() * 10000)),
+        accountLogin: `bob-org-${runId}`,
+        accountType: "Organization",
+        accountId: BigInt(800001),
+        repositorySelection: "ALL",
+        htmlUrl: "https://github.com/organizations/bob-org/settings/installations/900001",
+      },
+    });
+
     const bobRepo = await prisma.repository.create({
       data: {
         workspaceId: bobMe.activeWorkspace!.id,
+        installationId: bobInstallation.id,
         provider: "GITHUB",
         externalId: `ext-bob-${runId}`,
         fullName: `bob-org/secret-repo-${runId}`,
@@ -209,10 +222,23 @@ describe("workspaces and multi-tenant isolation", () => {
     });
     expect(spoofedDetailRes.statusCode).toBe(404);
 
-    // Alice creates her own repos (direct Prisma seed) and cursor pagination respects workspace scope
+    // Alice creates her own installation and repos (direct Prisma seed) and cursor pagination respects workspace scope
+    const aliceInstallation = await prisma.githubInstallation.create({
+      data: {
+        workspaceId: aliceMe.activeWorkspace!.id,
+        installationId: BigInt(910001 + Math.floor(Math.random() * 10000)),
+        accountLogin: `alice-org-${runId}`,
+        accountType: "Organization",
+        accountId: BigInt(810001),
+        repositorySelection: "ALL",
+        htmlUrl: "https://github.com/organizations/alice-org/settings/installations/910001",
+      },
+    });
+
     const aliceRepo1 = await prisma.repository.create({
       data: {
         workspaceId: aliceMe.activeWorkspace!.id,
+        installationId: aliceInstallation.id,
         provider: "GITHUB",
         externalId: `ext-alice-1-${runId}`,
         fullName: `alice-org/repo-one-${runId}`,
@@ -224,6 +250,7 @@ describe("workspaces and multi-tenant isolation", () => {
     const aliceRepo2 = await prisma.repository.create({
       data: {
         workspaceId: aliceMe.activeWorkspace!.id,
+        installationId: aliceInstallation.id,
         provider: "GITHUB",
         externalId: `ext-alice-2-${runId}`,
         fullName: `alice-org/repo-two-${runId}`,

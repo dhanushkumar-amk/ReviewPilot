@@ -64,6 +64,10 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAiSettings, useAiUsage, useUpdateAiSettings } from "@/src/features/ai/use-ai";
+import { AiDisclosureDialog } from "@/components/ai/ai-disclosure-dialog";
+import { useWorkspace } from "@/src/features/me/use-me";
+import { BotIcon } from "lucide-react";
 
 const regionItems = [
   { label: "US East (Virginia)", value: "us-east-1" },
@@ -79,6 +83,15 @@ const blockSeverityItems = [
 ];
 
 export default function SettingsPage() {
+  const { activeWorkspace } = useWorkspace();
+  const role = activeWorkspace?.role?.trim().toLowerCase();
+  const isOwnerOrAdmin = role === "owner" || role === "admin";
+
+  const aiSettingsQuery = useAiSettings();
+  const aiUsageQuery = useAiUsage();
+  const updateAiSettings = useUpdateAiSettings();
+
+  const [aiDisclosureOpen, setAiDisclosureOpen] = React.useState(false);
   const [workspaceName, setWorkspaceName] = React.useState("ReviewPilot Org");
   const [workspaceSlug, setWorkspaceSlug] = React.useState("reviewpilot-org");
   const [region, setRegion] = React.useState("us-east-1");
@@ -205,7 +218,58 @@ export default function SettingsPage() {
         </TabsContent>
 
         {/* Scan Policies Tab */}
-        <TabsContent value="policies">
+        <TabsContent value="policies" className="flex flex-col gap-6">
+          <Card>
+            <CardHeader className="border-b">
+              <CardTitle>AI Assist</CardTitle>
+              <CardDescription>
+                Enable AI-powered finding explanations and automated fix drafting for your workspace.
+              </CardDescription>
+              <CardAction>
+                <BotIcon className="size-4 text-link" />
+              </CardAction>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <FieldSet className="max-w-2xl">
+                <FieldGroup>
+                  <Field orientation="horizontal">
+                    <FieldContent>
+                      <FieldLabel htmlFor="ai-assist-toggle">
+                        Workspace AI Assist
+                      </FieldLabel>
+                      <FieldDescription>
+                        Allows workspace members to request explanations and draft fixes. Free-tier providers have daily limits.
+                      </FieldDescription>
+                    </FieldContent>
+                    <Switch
+                      id="ai-assist-toggle"
+                      checked={aiSettingsQuery.data?.aiEnabled ?? false}
+                      disabled={!isOwnerOrAdmin || updateAiSettings.isPending}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setAiDisclosureOpen(true);
+                        } else {
+                          void updateAiSettings.mutateAsync(false).then(() => {
+                            toast.success("Disabled AI assist");
+                          });
+                        }
+                      }}
+                    />
+                  </Field>
+
+                  {aiUsageQuery.data && (
+                    <div className="flex items-center justify-between text-xs text-muted-foreground pt-2">
+                      <span>Today&apos;s AI Usage</span>
+                      <span className="font-mono">
+                        {aiUsageQuery.data.callsToday} / {aiUsageQuery.data.limit} calls used
+                      </span>
+                    </div>
+                  )}
+                </FieldGroup>
+              </FieldSet>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader className="border-b">
               <CardTitle>Automated review & merge gates</CardTitle>
@@ -480,6 +544,12 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <AiDisclosureDialog
+        open={aiDisclosureOpen}
+        onOpenChange={setAiDisclosureOpen}
+        onSuccess={() => void aiSettingsQuery.refetch()}
+      />
     </div>
   );
 }

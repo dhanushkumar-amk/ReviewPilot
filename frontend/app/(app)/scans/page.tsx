@@ -1,61 +1,33 @@
 "use client";
 
 import * as React from "react";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
-import { toast } from "sonner";
+import Link from "next/link";
+import { formatDistanceToNow } from "date-fns";
 import {
-  ActivityIcon,
-  CheckCircle2Icon,
-  ClockIcon,
-  PlayIcon,
+  AlertCircleIcon,
+  GitBranchIcon,
   RefreshCwIcon,
-  TerminalIcon,
-  XCircleIcon,
+  ScanSearchIcon,
 } from "lucide-react";
 
+import { EmptyState } from "@/components/app-shell/empty-state";
 import { PageHeader } from "@/components/app-shell/page-header";
-import { StatCard } from "@/components/app-shell/stat-card";
+import {
+  Alert,
+  AlertAction,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from "@/components/ui/chart";
-import {
-  CodeBlock,
-  CodeBlockActions,
-  CodeBlockContent,
-  CodeBlockCopyButton,
-  CodeBlockHeader,
-  CodeBlockTitle,
-} from "@/components/ui/code-block";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Field,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -64,15 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { Spinner } from "@/components/ui/spinner";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -82,416 +46,407 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { cn } from "@/lib/utils";
+import { Progress } from "@/components/ui/progress";
+import { useScanStream } from "@/src/features/scans/use-scan-stream";
+import { useWorkspace } from "@/src/features/me/use-me";
+import { useRepositories } from "@/src/features/repositories/use-repositories";
 import {
-  initialRepositories,
-  initialScanRuns,
-  scanActivityChartData,
-  type ScanRunRecord,
-} from "@/lib/dashboard-data";
+  useScans,
+  type ScanStatus,
+  type ScanTrigger,
+} from "@/src/features/scans/use-scans";
 
-const scanChartConfig = {
-  reviews: {
-    label: "Scans executed",
-    color: "var(--primary)",
+type StatusFilterValue = "ALL" | ScanStatus;
+
+interface StatusDisplayConfig {
+  label: string;
+  dotClassName: string;
+}
+
+const SCAN_STATUS_DISPLAY: Record<ScanStatus, StatusDisplayConfig> = {
+  QUEUED: {
+    label: "Queued",
+    dotClassName: "bg-muted-foreground",
   },
-  findings: {
-    label: "Issues detected",
-    color: "var(--destructive)",
+  RUNNING: {
+    label: "Running",
+    dotClassName: "bg-link",
   },
-} satisfies ChartConfig;
+  COMPLETED: {
+    label: "Completed",
+    dotClassName: "bg-success",
+  },
+  FAILED: {
+    label: "Failed",
+    dotClassName: "bg-destructive",
+  },
+  SKIPPED: {
+    label: "Skipped",
+    dotClassName: "bg-muted-foreground",
+  },
+};
 
-const repoSelectItems = initialRepositories.map((repo) => ({
-  label: repo.fullName,
-  value: repo.fullName,
-}));
+const TRIGGER_LABELS: Record<ScanTrigger, string> = {
+  PUSH: "Push",
+  MANUAL: "Manual",
+};
 
-function statusVariant(
-  status: ScanRunRecord["status"]
-): React.ComponentProps<typeof Badge>["variant"] {
-  if (status === "Completed") return "success";
-  if (status === "Failed") return "destructive";
-  if (status === "Running") return "default";
-  return "secondary";
+function formatRelativeTime(iso: string | null | undefined): string {
+  if (!iso) {
+    return "—";
+  }
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
+    return "—";
+  }
+  return formatDistanceToNow(date, { addSuffix: true });
+}
+
+function formatDuration(
+  startedAt: string | null | undefined,
+  finishedAt: string | null | undefined,
+): string {
+  if (!startedAt || !finishedAt) {
+    return "—";
+  }
+  const start = new Date(startedAt).getTime();
+  const end = new Date(finishedAt).getTime();
+  if (Number.isNaN(start) || Number.isNaN(end) || end < start) {
+    return "—";
+  }
+  const totalSeconds = Math.round((end - start) / 1000);
+  if (totalSeconds < 60) {
+    return `${totalSeconds}s`;
+  }
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}m ${seconds}s`;
 }
 
 export default function ScansPage() {
-  const [runs, setRuns] = React.useState<ScanRunRecord[]>(initialScanRuns);
-  const [statusFilter, setStatusFilter] = React.useState<string>("all");
-  const [selectedRun, setSelectedRun] = React.useState<ScanRunRecord | null>(
-    null
-  );
+  const { activeWorkspace } = useWorkspace();
+  const [statusFilter, setStatusFilter] =
+    React.useState<StatusFilterValue>("ALL");
+  const [repositoryFilter, setRepositoryFilter] = React.useState<string>("ALL");
+  const [cursorHistory, setCursorHistory] = React.useState<string[]>([]);
 
-  const [triggerOpen, setTriggerOpen] = React.useState(false);
-  const [targetRepo, setTargetRepo] = React.useState(
-    initialRepositories[0]?.fullName ?? "reviewpilot/core"
-  );
-  const [targetBranch, setTargetBranch] = React.useState("main");
+  React.useEffect(() => {
+    setCursorHistory([]);
+  }, [statusFilter, repositoryFilter, activeWorkspace?.id]);
 
-  const filteredRuns = runs.filter(
-    (run) => statusFilter === "all" || run.status === statusFilter
-  );
+  const currentCursor = cursorHistory[cursorHistory.length - 1];
 
-  const handleStartManualScan = (event: React.FormEvent) => {
-    event.preventDefault();
-    const idNum = 8945 + runs.length - initialScanRuns.length;
-    const nextRun: ScanRunRecord = {
-      id: `SCN-${idNum}`,
-      repository: targetRepo,
-      branch: targetBranch.trim() || "main",
-      commitSha: "f3a81c0",
-      trigger: "Manual",
-      status: "Running",
-      duration: "0m 04s",
-      filesScanned: 64,
-      findingsCount: 0,
-      startedAt: "Just now",
-      steps: [
-        {
-          name: "Checkout shallow diff",
-          duration: "1.2s",
-          status: "Completed",
-          detail: `Cloned ${targetRepo} (${targetBranch.trim() || "main"})`,
-        },
-        {
-          name: "AST + taint graph analysis",
-          duration: "2.8s",
-          status: "Running",
-          detail: "Running Inngest worker job scan-repository...",
-        },
-      ],
-    };
-    setRuns((prev) => [nextRun, ...prev]);
-    setTriggerOpen(false);
-    toast.success(`Started ${nextRun.id} on ${nextRun.repository}`);
-  };
+  const repositoriesQuery = useRepositories({
+    limit: 100,
+    status: ["CONNECTED"],
+  });
+
+  const scansQuery = useScans({
+    cursor: currentCursor,
+    limit: 20,
+    repositoryId: repositoryFilter === "ALL" ? undefined : repositoryFilter,
+    status: statusFilter === "ALL" ? undefined : statusFilter,
+  });
+
+  const workspaceName = activeWorkspace?.name ?? "this workspace";
+  const items = scansQuery.data?.items ?? [];
+  const hasActiveFilter = statusFilter !== "ALL" || repositoryFilter !== "ALL";
+
+  const hasRunningOrQueued = items.some(
+    (s) => s.status === "QUEUED" || s.status === "RUNNING",
+  );
+  useScanStream({ enabled: hasRunningOrQueued });
+
+  const repositoryItems = React.useMemo(
+    () => [
+      { label: "All repositories", value: "ALL" },
+      ...(repositoriesQuery.data?.items ?? []).map((repo) => ({
+        label: repo.fullName,
+        value: repo.id,
+      })),
+    ],
+    [repositoriesQuery.data?.items],
+  );
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Scans"
-        description="Inspect automated Inngest scan executions, worker latency, and step-by-step analyzer diagnostics."
+        description={`Recent repository scans in ${workspaceName}.`}
         actions={
-          <Dialog open={triggerOpen} onOpenChange={setTriggerOpen}>
-            <DialogTrigger render={<Button />}>
-              <PlayIcon data-icon="inline-start" />
-              Run manual scan
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <form
-                onSubmit={handleStartManualScan}
-                className="flex flex-col gap-4"
-              >
-                <DialogHeader>
-                  <DialogTitle>Trigger manual scan</DialogTitle>
-                  <DialogDescription>
-                    Dispatch an immediate security and code quality sweep via
-                    Inngest workers.
-                  </DialogDescription>
-                </DialogHeader>
-                <FieldGroup>
-                  <Field>
-                    <FieldLabel htmlFor="scan-repo">Repository</FieldLabel>
-                    <Select
-                      items={repoSelectItems}
-                      value={targetRepo}
-                      onValueChange={(value) => {
-                        if (value) setTargetRepo(value);
-                      }}
-                    >
-                      <SelectTrigger id="scan-repo" className="w-full">
-                        <SelectValue placeholder="Choose repository" />
-                      </SelectTrigger>
-                      <SelectContent alignItemWithTrigger={false}>
-                        <SelectGroup>
-                          {repoSelectItems.map((item) => (
-                            <SelectItem key={item.value} value={item.value}>
-                              {item.label}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                  </Field>
-                  <Field>
-                    <FieldLabel htmlFor="scan-branch">Branch or tag</FieldLabel>
-                    <Input
-                      id="scan-branch"
-                      value={targetBranch}
-                      onChange={(e) => setTargetBranch(e.target.value)}
-                    />
-                  </Field>
-                </FieldGroup>
-                <DialogFooter>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setTriggerOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit">Dispatch scan job</Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={scansQuery.isFetching}
+            onClick={() => void scansQuery.refetch()}
+          >
+            <RefreshCwIcon data-icon="inline-start" />
+            Refresh
+          </Button>
         }
       />
 
-      {/* Metrics Row */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard
-          title="Scans (24h)"
-          value={runs.length * 9}
-          description={`${runs.filter((r) => r.status === "Running").length} actively executing in queue`}
-          icon={ActivityIcon}
-        />
-        <StatCard
-          title="Median scan time"
-          value="54s"
-          description="Across incremental pull request diffs"
-          icon={ClockIcon}
-        />
-        <StatCard
-          title="Pipeline pass rate"
-          value="96.8%"
-          valueClassName="text-success"
-          description="Inngest cloud workers operational"
-          badge={{ label: "Healthy", variant: "success" }}
-        />
-      </div>
-
-      {/* Throughput Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Daily scan throughput</CardTitle>
-          <CardDescription>
-            Automated analyzer runs versus surfaced code issues over the past 11
-            days
-          </CardDescription>
-          <CardAction>
-            <Badge variant="outline">Inngest queue</Badge>
-          </CardAction>
-        </CardHeader>
-        <CardContent>
-          <ChartContainer config={scanChartConfig} className="h-[220px] w-full">
-            <BarChart
-              data={scanActivityChartData}
-              margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
-            >
-              <CartesianGrid vertical={false} />
-              <XAxis
-                dataKey="date"
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-              />
-              <YAxis tickLine={false} axisLine={false} tickMargin={8} />
-              <ChartTooltip content={<ChartTooltipContent />} />
-              <Bar
-                dataKey="reviews"
-                fill="var(--color-reviews)"
-                radius={[4, 4, 0, 0]}
-              />
-              <Bar
-                dataKey="findings"
-                fill="var(--color-findings)"
-                radius={[4, 4, 0, 0]}
-              />
-              <ChartLegend content={<ChartLegendContent />} />
-            </BarChart>
-          </ChartContainer>
-        </CardContent>
-      </Card>
-
-      {/* Scan Runs Table */}
-      <Card>
-        <CardHeader className="border-b">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-col gap-1">
-              <CardTitle>Recent scan executions</CardTitle>
-              <CardDescription>
-                Select any run to inspect step timings and analyzer output
-              </CardDescription>
-            </div>
-            <ToggleGroup
+      {scansQuery.isLoading ? (
+        <Card>
+          <CardHeader className="border-b">
+            <Skeleton className="h-5 w-40" />
+            <Skeleton className="h-4 w-64" />
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3 pt-4">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <Skeleton key={index} className="h-11 w-full" />
+            ))}
+          </CardContent>
+        </Card>
+      ) : scansQuery.isError ? (
+        <Alert variant="destructive">
+          <AlertCircleIcon />
+          <AlertTitle>Unable to load scans</AlertTitle>
+          <AlertDescription>
+            {scansQuery.error instanceof Error && scansQuery.error.message
+              ? scansQuery.error.message
+              : "Something went wrong while fetching workspace scans."}
+          </AlertDescription>
+          <AlertAction>
+            <Button
+              type="button"
               variant="outline"
               size="sm"
-              value={[statusFilter]}
-              onValueChange={(next) => {
-                if (next[0]) setStatusFilter(next[0]);
-              }}
+              onClick={() => void scansQuery.refetch()}
             >
-              <ToggleGroupItem value="all">All</ToggleGroupItem>
-              <ToggleGroupItem value="Running">Running</ToggleGroupItem>
-              <ToggleGroupItem value="Completed">Completed</ToggleGroupItem>
-              <ToggleGroupItem value="Failed">Failed</ToggleGroupItem>
-            </ToggleGroup>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Run ID</TableHead>
-                <TableHead>Repository & branch</TableHead>
-                <TableHead>Trigger</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Duration</TableHead>
-                <TableHead>Findings</TableHead>
-                <TableHead className="text-right">Details</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredRuns.map((run) => (
-                <TableRow
-                  key={run.id}
-                  className="cursor-pointer"
-                  onClick={() => setSelectedRun(run)}
-                >
-                  <TableCell className="font-mono text-xs font-medium">
-                    {run.id}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-col">
-                      <span className="font-mono text-xs font-medium text-foreground">
-                        {run.repository}
-                      </span>
-                      <span className="font-mono text-xs text-muted-foreground">
-                        {run.branch} · {run.commitSha}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{run.trigger}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={statusVariant(run.status)}>
-                      {run.status === "Running" ? <Spinner /> : null}
-                      {run.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
-                    {run.duration}
-                  </TableCell>
-                  <TableCell className="font-mono text-sm tabular-nums">
-                    {run.findingsCount}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedRun(run);
-                      }}
-                    >
-                      <TerminalIcon data-icon="inline-start" />
-                      Trace
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* Run Trace Sheet */}
-      <Sheet
-        open={Boolean(selectedRun)}
-        onOpenChange={(open) => {
-          if (!open) setSelectedRun(null);
-        }}
-      >
-        <SheetContent side="right" className="w-full sm:max-w-lg flex flex-col">
-          {selectedRun ? (
-            <>
-              <SheetHeader className="border-b">
-                <div className="flex items-center gap-2">
-                  <Badge variant={statusVariant(selectedRun.status)}>
-                    {selectedRun.status}
-                  </Badge>
-                  <span className="font-mono text-xs text-muted-foreground">
-                    {selectedRun.id} · {selectedRun.startedAt}
-                  </span>
-                </div>
-                <SheetTitle className="font-mono">
-                  {selectedRun.repository}
-                </SheetTitle>
-                <SheetDescription className="font-mono">
-                  {selectedRun.branch} ({selectedRun.commitSha}) ·{" "}
-                  {selectedRun.filesScanned} files scanned
-                </SheetDescription>
-              </SheetHeader>
-
-              <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
-                <div className="flex flex-col gap-2">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Execution steps
-                  </span>
-                  {selectedRun.steps.map((step) => (
-                    <div
-                      key={step.name}
-                      className="flex flex-col gap-1 rounded-lg border border-border bg-card p-3"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          {step.status === "Completed" ? (
-                            <CheckCircle2Icon className="size-4 text-success" />
-                          ) : step.status === "Failed" ? (
-                            <XCircleIcon className="size-4 text-destructive" />
-                          ) : (
-                            <Spinner />
-                          )}
-                          <span className="text-sm font-medium text-foreground">
-                            {step.name}
-                          </span>
-                        </div>
-                        <span className="font-mono text-xs text-muted-foreground">
-                          {step.duration}
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {step.detail}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-
-                <CodeBlock size="sm">
-                  <CodeBlockHeader>
-                    <CodeBlockTitle>Worker telemetry log</CodeBlockTitle>
-                    <CodeBlockActions>
-                      <CodeBlockCopyButton
-                        value={`[${selectedRun.id}] repo=${selectedRun.repository} sha=${selectedRun.commitSha} status=${selectedRun.status}`}
-                      />
-                    </CodeBlockActions>
-                  </CodeBlockHeader>
-                  <CodeBlockContent lineNumbers>
-                    {`[inngest] job=${selectedRun.id} trigger="${selectedRun.trigger}"
-[git] checkout ${selectedRun.repository}@${selectedRun.commitSha} (${selectedRun.filesScanned} files)
-[engine] evaluated AST + CWE rules in ${selectedRun.duration}
-[result] status=${selectedRun.status} findings=${selectedRun.findingsCount}`}
-                  </CodeBlockContent>
-                </CodeBlock>
-              </div>
-
-              <SheetFooter className="border-t">
+              Retry
+            </Button>
+          </AlertAction>
+        </Alert>
+      ) : items.length === 0 && !hasActiveFilter && cursorHistory.length === 0 ? (
+        <Card>
+          <CardContent className="py-10">
+            <EmptyState
+              icon={<ScanSearchIcon />}
+              title="No scans yet"
+              description="Push to a connected repository's default branch or trigger a manual scan from Repositories."
+              action={
                 <Button
-                  variant="outline"
-                  onClick={() => {
-                    toast.success(`Re-queued scan for ${selectedRun.repository}`);
-                    setSelectedRun(null);
+                  size="sm"
+                  render={<Link href="/repositories" />}
+                  nativeButton={false}
+                >
+                  Go to Repositories
+                </Button>
+              }
+            />
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="flex flex-col gap-4">
+          <Card>
+            <CardContent className="flex flex-col gap-3 pt-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <Select
+                  items={repositoryItems}
+                  value={repositoryFilter}
+                  onValueChange={(value) => {
+                    if (value) {
+                      setRepositoryFilter(value);
+                    }
                   }}
                 >
-                  <RefreshCwIcon data-icon="inline-start" />
-                  Re-run scan
+                  <SelectTrigger className="w-full sm:w-64" size="sm">
+                    <SelectValue placeholder="All repositories">
+                      {(value: string | null) => {
+                        if (!value || value === "ALL") {
+                          return "All repositories";
+                        }
+                        return (
+                          repositoryItems.find((item) => item.value === value)
+                            ?.label ?? "All repositories"
+                        );
+                      }}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {repositoryItems.map((item) => (
+                        <SelectItem key={item.value} value={item.value}>
+                          {item.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+
+                <ToggleGroup
+                  variant="outline"
+                  size="sm"
+                  value={[statusFilter]}
+                  onValueChange={(next) => {
+                    const nextValue = next[0] as StatusFilterValue | undefined;
+                    if (nextValue) {
+                      setStatusFilter(nextValue);
+                    }
+                  }}
+                >
+                  <ToggleGroupItem value="ALL">All</ToggleGroupItem>
+                  <ToggleGroupItem value="QUEUED">Queued</ToggleGroupItem>
+                  <ToggleGroupItem value="RUNNING">Running</ToggleGroupItem>
+                  <ToggleGroupItem value="COMPLETED">Completed</ToggleGroupItem>
+                  <ToggleGroupItem value="FAILED">Failed</ToggleGroupItem>
+                  <ToggleGroupItem value="SKIPPED">Skipped</ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="border-b">
+              <CardTitle>Scan history</CardTitle>
+              <CardDescription>
+                Showing {items.length}{" "}
+                {items.length === 1 ? "scan" : "scans"} in {workspaceName}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow className="h-11 border-border">
+                    <TableHead>Repository</TableHead>
+                    <TableHead>Commit</TableHead>
+                    <TableHead>Branch</TableHead>
+                    <TableHead>Trigger</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Started</TableHead>
+                    <TableHead className="text-right">Duration</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {items.length === 0 ? (
+                    <TableRow className="h-24 border-border">
+                      <TableCell
+                        colSpan={7}
+                        className="text-center text-sm text-muted-foreground"
+                      >
+                        <div className="flex flex-col items-center gap-2 py-4">
+                          <span>No scans match your current filter.</span>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setStatusFilter("ALL");
+                              setRepositoryFilter("ALL");
+                            }}
+                          >
+                            Clear filters
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    items.map((scan) => {
+                      const statusMeta = SCAN_STATUS_DISPLAY[scan.status];
+                      return (
+                        <TableRow key={scan.id} className="h-11 border-border">
+                          <TableCell className="font-medium text-foreground">
+                            <Link
+                              href={`/scans/${scan.id}`}
+                              className="hover:underline flex items-center gap-1.5"
+                            >
+                              {scan.repository.fullName}
+                            </Link>
+                          </TableCell>
+                          <TableCell>
+                            <span className="font-mono text-xs text-muted-foreground">
+                              {scan.commitSha.slice(0, 7)}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="inline-flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
+                              <GitBranchIcon className="size-3.5" />
+                              {scan.branch}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">
+                              {TRIGGER_LABELS[scan.trigger]}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {scan.status === "RUNNING" ? (
+                              <div className="flex flex-col gap-1 w-28">
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="capitalize text-link">
+                                    {scan.phase || "Running"}
+                                  </span>
+                                  <span className="text-muted-foreground font-mono">
+                                    {scan.progress}%
+                                  </span>
+                                </div>
+                                <Progress value={scan.progress} className="h-1.5" />
+                              </div>
+                            ) : (
+                              <span className="inline-flex items-center gap-2 text-sm text-foreground">
+                                <span
+                                  className={cn(
+                                    "size-2 shrink-0 rounded-full",
+                                    statusMeta.dotClassName,
+                                  )}
+                                  aria-hidden="true"
+                                />
+                                {statusMeta.label}
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {formatRelativeTime(scan.startedAt ?? scan.createdAt)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                            {formatDuration(scan.startedAt, scan.finishedAt)}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+            {cursorHistory.length > 0 || scansQuery.data?.nextCursor ? (
+              <CardFooter className="justify-between border-t">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={cursorHistory.length === 0 || scansQuery.isFetching}
+                  onClick={() =>
+                    setCursorHistory((prev) => prev.slice(0, -1))
+                  }
+                >
+                  Previous
                 </Button>
-              </SheetFooter>
-            </>
-          ) : null}
-        </SheetContent>
-      </Sheet>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={
+                    !scansQuery.data?.nextCursor || scansQuery.isFetching
+                  }
+                  onClick={() => {
+                    if (scansQuery.data?.nextCursor) {
+                      setCursorHistory((prev) => [
+                        ...prev,
+                        scansQuery.data!.nextCursor!,
+                      ]);
+                    }
+                  }}
+                >
+                  Next
+                </Button>
+              </CardFooter>
+            ) : null}
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

@@ -80,15 +80,24 @@ model Verification {
 }
 
 model Organization {
-  id           String       @id
-  name         String
-  slug         String
-  logo         String?
-  createdAt    DateTime
-  metadata     String?
-  members      Member[]
-  invitations  Invitation[]
-  repositories Repository[]
+  id                  String               @id
+  name                String
+  slug                String
+  logo                String?
+  createdAt           DateTime
+  metadata            String?
+  members             Member[]
+  invitations         Invitation[]
+  repositories        Repository[]
+  githubInstallations GithubInstallation[]
+  scans               Scan[]
+  findings            Finding[]
+  findingInsights     FindingInsight[]
+  fixProposals        FixProposal[]
+  aiUsages            AiUsage[]
+  aiEnabled           Boolean              @default(false)
+  aiEnabledBy         String?
+  aiEnabledAt         DateTime?
 
   @@unique([slug])
   @@map("organization")
@@ -130,24 +139,264 @@ enum RepoProvider {
 }
 
 enum RepoStatus {
+  AVAILABLE
   CONNECTED
   DISCONNECTED
+  REMOVED
+}
+
+enum GithubAccountType {
+  User
+  Organization
+}
+
+enum GithubRepositorySelection {
+  ALL
+  SELECTED
+}
+
+model GithubInstallation {
+  id                  String                    @id @default(cuid())
+  workspaceId         String
+  workspace           Organization              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  installationId      BigInt                    @unique
+  accountLogin        String
+  accountType         GithubAccountType
+  accountId           BigInt
+  repositorySelection GithubRepositorySelection
+  htmlUrl             String
+  suspendedAt         DateTime?
+  lastSyncedAt        DateTime?
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+  repositories        Repository[]
+
+  @@index([workspaceId])
+  @@map("github_installation")
 }
 
 model Repository {
-  id            String       @id @default(cuid())
-  workspaceId   String
-  workspace     Organization @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  provider      RepoProvider
-  externalId    String
-  fullName      String
-  defaultBranch String
-  isPrivate     Boolean
-  status        RepoStatus
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  id             String             @id @default(cuid())
+  workspaceId    String
+  workspace      Organization       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  installationId String
+  installation   GithubInstallation @relation(fields: [installationId], references: [id], onDelete: Cascade)
+  provider       RepoProvider
+  externalId     String
+  fullName       String
+  defaultBranch  String
+  isPrivate      Boolean
+  status         RepoStatus         @default(AVAILABLE)
+  lastPushAt     DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  scans          Scan[]
+  findings       Finding[]
 
   @@unique([workspaceId, provider, externalId])
   @@index([workspaceId])
+  @@index([installationId])
   @@map("repository")
+}
+
+enum WebhookDeliveryStatus {
+  RECEIVED
+  PROCESSED
+  IGNORED
+  FAILED
+}
+
+enum ScanTrigger {
+  PUSH
+  MANUAL
+}
+
+enum ScanStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  SKIPPED
+}
+
+// TODO(retention): Delete webhook_delivery rows older than 30 days via scheduled cleanup job.
+model WebhookDelivery {
+  id             String                @id @default(cuid())
+  deliveryId     String                @unique
+  event          String
+  action         String?
+  installationId BigInt?
+  status         WebhookDeliveryStatus @default(RECEIVED)
+  ignoreReason   String?
+  receivedAt     DateTime              @default(now())
+  processedAt    DateTime?
+
+  @@index([receivedAt])
+  @@map("webhook_delivery")
+}
+
+model Scan {
+  id           String       @id @default(cuid())
+  workspaceId  String
+  workspace    Organization @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  repositoryId String
+  repository   Repository   @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  branch       String
+  commitSha    String
+  trigger      ScanTrigger
+  status       ScanStatus   @default(QUEUED)
+  phase        String?
+  progress     Int          @default(0)
+  filesScanned Int?
+  findingsCount Int         @default(0)
+  durationMs   Int?
+  analyzers    Json?
+  errorCode    String?
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @default(now()) @updatedAt
+
+  @@unique([repositoryId, commitSha])
+  @@index([workspaceId])
+  @@index([repositoryId])
+  @@index([workspaceId, createdAt(sort: Desc)])
+  @@map("scan")
+}
+
+enum FindingSeverity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+  INFO
+}
+
+enum FindingCategory {
+  SECURITY
+  BUG
+  PERFORMANCE
+  QUALITY
+  SECRET
+}
+
+enum FindingTool {
+  ESLINT
+  SEMGREP
+  GITLEAKS
+}
+
+enum FindingStatus {
+  OPEN
+  ACCEPTED
+  REJECTED
+  FIXED
+}
+
+model Finding {
+  id           String          @id @default(cuid())
+  workspaceId  String
+  workspace    Organization    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  repositoryId String
+  repository   Repository      @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  firstScanId  String
+  lastScanId   String
+  fingerprint  String
+  tool         FindingTool
+  ruleId       String
+  severity     FindingSeverity
+  category     FindingCategory
+  title        String
+  message      String
+  filePath     String
+  startLine    Int
+  endLine      Int
+  snippet      String?
+  status       FindingStatus   @default(OPEN)
+  firstSeenAt  DateTime        @default(now())
+  lastSeenAt   DateTime        @default(now())
+  resolvedAt   DateTime?
+  insights     FindingInsight[]
+  fixProposals FixProposal[]
+
+  @@unique([repositoryId, fingerprint])
+  @@index([workspaceId])
+  @@index([repositoryId])
+  @@index([workspaceId, status, severity])
+  @@index([repositoryId, status])
+  @@map("finding")
+}
+
+model FindingInsight {
+  id            String       @id @default(cuid())
+  workspaceId   String
+  workspace     Organization @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  findingId     String
+  finding       Finding      @relation(fields: [findingId], references: [id], onDelete: Cascade)
+  promptVersion String
+  contentHash   String
+  summary       String
+  whyItMatters  String
+  howToFix      String
+  provider      String
+  model         String
+  redacted      Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+
+  @@unique([findingId, promptVersion])
+  @@index([workspaceId])
+  @@map("finding_insight")
+}
+
+enum FixProposalStatus {
+  DRAFT
+  DISCARDED
+  INVALID
+}
+
+enum FixProposalConfidence {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model FixProposal {
+  id              String                @id @default(cuid())
+  workspaceId     String
+  workspace       Organization          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  findingId       String
+  finding         Finding               @relation(fields: [findingId], references: [id], onDelete: Cascade)
+  status          FixProposalStatus     @default(DRAFT)
+  filePath        String
+  startLine       Int
+  endLine         Int
+  originalCode    String
+  replacementCode String
+  diff            String
+  explanation     String
+  confidence      FixProposalConfidence
+  checks          Json
+  provider        String
+  model           String
+  promptVersion   String
+  createdByUserId String
+  createdAt       DateTime              @default(now())
+
+  @@index([workspaceId])
+  @@index([findingId])
+  @@map("fix_proposal")
+}
+
+model AiUsage {
+  id          String        @id @default(cuid())
+  workspaceId String?
+  workspace   Organization? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  day         DateTime      @db.Date
+  calls       Int           @default(0)
+  tokensIn    Int           @default(0)
+  tokensOut   Int           @default(0)
+
+  @@unique([workspaceId, day])
+  @@index([workspaceId])
+  @@map("ai_usage")
 }

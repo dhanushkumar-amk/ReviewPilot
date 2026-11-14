@@ -1,29 +1,36 @@
 "use client";
 
 import * as React from "react";
-import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import {
-  useLegacyTable,
-  getCoreRowModel,
-  getSortedRowModel,
-  getPaginationRowModel,
-  type LegacyColumnDef as ColumnDef,
-} from "@tanstack/react-table/legacy";
-import { flexRender } from "@tanstack/react-table";
+  AlertCircleIcon,
+  CheckIcon,
+  CopyIcon,
+  RefreshCwIcon,
+  SearchIcon,
+  ShieldAlertIcon,
+  XIcon,
+} from "lucide-react";
 import { toast } from "sonner";
-import { PageHeader } from "@/components/app-shell/page-header";
+
 import { EmptyState } from "@/components/app-shell/empty-state";
-import { StatCard } from "@/components/app-shell/stat-card";
-import { MarkdownView } from "@/components/markdown-view";
+import { FindingAiAssist } from "@/components/ai/finding-ai-assist";
+import { PageHeader } from "@/components/app-shell/page-header";
+import {
+  Alert,
+  AlertAction,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
+  CardContent,
+  CardFooter,
   CardHeader,
   CardTitle,
-  CardDescription,
-  CardContent,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   InputGroup,
@@ -31,1378 +38,655 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableHead,
-  TableRow,
-  TableCell,
-} from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuCheckboxItem,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
-} from "@/components/ui/dropdown-menu";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-  SheetFooter,
-} from "@/components/ui/sheet";
-import { Alert } from "@/components/ui/alert";
-import {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-} from "@/components/ui/tooltip";
-import {
   Select,
-  SelectTrigger,
-  SelectValue,
   SelectContent,
   SelectGroup,
   SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  mockFindings,
-  type Finding,
-  type Severity,
-  type FindingStatus,
-} from "@/lib/mock-data";
-import { cn } from "cn";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
-  WrenchIcon,
-  ShieldCheckIcon,
-  ShieldAlertIcon,
-  SearchIcon,
-  DownloadIcon,
-  SlidersHorizontalIcon,
-  ColumnsIcon,
-  ChevronDownIcon,
-  MoreHorizontalIcon,
-  CopyIcon,
-  CheckIcon,
-  XIcon,
-  ArrowUpDownIcon,
-  ArrowUpIcon,
-  ArrowDownIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  EyeIcon,
-  CheckCircle2Icon,
-  XCircleIcon,
-} from "lucide-react";
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+import {
+  useFindings,
+  useUpdateFindingStatus,
+  type FindingItem,
+  type FindingSeverity,
+  type FindingStatus,
+  type FindingTool,
+} from "@/src/features/findings/use-findings";
+import { useRepositories } from "@/src/features/repositories/use-repositories";
 
-// Severity Badge using semantic Badge variants
-function SeverityBadge({ severity }: { severity: Severity }) {
-  switch (severity) {
-    case "Critical":
-      return <Badge variant="destructive">Critical</Badge>;
-    case "High":
-      return <Badge variant="destructive">High</Badge>;
-    case "Medium":
-      return <Badge variant="default">Medium</Badge>;
-    case "Low":
-      return <Badge variant="secondary">Low</Badge>;
-  }
-}
-
-// Status definition: 8px dot + text + semantic token + descriptive tooltip
-const statusConfig: Record<
-  FindingStatus,
-  { dotClass: string; tooltip: string }
+const SEVERITY_BADGES: Record<
+  FindingSeverity,
+  { label: string; className: string }
 > = {
-  Open: {
-    dotClass: "bg-destructive",
-    tooltip: "Open finding requiring review and remediation",
-  },
-  Triaged: {
-    dotClass: "bg-warning",
-    tooltip: "Finding acknowledged and scheduled for upcoming sprint",
-  },
-  "In progress": {
-    dotClass: "bg-link",
-    tooltip: "Active remediation pull request currently under review",
-  },
-  Fixed: {
-    dotClass: "bg-success",
-    tooltip: "Remediated in codebase and verified by automated scanner",
-  },
+  CRITICAL: { label: "Critical", className: "bg-destructive text-destructive-foreground border-transparent" },
+  HIGH: { label: "High", className: "bg-destructive/15 text-destructive border-destructive/20" },
+  MEDIUM: { label: "Medium", className: "bg-link/15 text-link border-link/20" },
+  LOW: { label: "Low", className: "bg-muted text-muted-foreground border-border" },
+  INFO: { label: "Info", className: "bg-muted text-muted-foreground border-border" },
 };
 
-function StatusIndicator({ status }: { status: FindingStatus }) {
-  const config = statusConfig[status];
+const STATUS_DISPLAY: Record<
+  FindingStatus,
+  { label: string; dotClassName: string }
+> = {
+  OPEN: { label: "Open", dotClassName: "bg-destructive" },
+  ACCEPTED: { label: "Accepted", dotClassName: "bg-link" },
+  REJECTED: { label: "Rejected", dotClassName: "bg-muted-foreground" },
+  FIXED: { label: "Fixed", dotClassName: "bg-success" },
+};
 
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <span
-            className="inline-flex items-center gap-1.5 cursor-help"
-            tabIndex={0}
-          />
-        }
-      >
-        <span
-          className={cn("size-2 rounded-full shrink-0", config.dotClass)}
-          aria-hidden="true"
-        />
-        <span className="text-xs text-foreground font-medium">{status}</span>
-      </TooltipTrigger>
-      <TooltipContent>{config.tooltip}</TooltipContent>
-    </Tooltip>
-  );
-}
+export default function FindingsPage() {
+  const [searchInput, setSearchInput] = React.useState("");
+  const [debouncedSearch, setDebouncedSearch] = React.useState("");
+  const [severityFilter, setSeverityFilter] = React.useState<FindingSeverity[]>([]);
+  const [statusFilter, setStatusFilter] = React.useState<FindingStatus[]>([]);
+  const [toolFilter, setToolFilter] = React.useState<FindingTool[]>([]);
+  const [repositoryFilter, setRepositoryFilter] = React.useState<string>("ALL");
+  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
+  const [cursorHistory, setCursorHistory] = React.useState<string[]>([]);
+  const [activeFinding, setActiveFinding] = React.useState<FindingItem | null>(null);
+  const [copiedPath, setCopiedPath] = React.useState(false);
 
-type SortingState = Array<{ id: string; desc: boolean }>;
-type VisibilityState = Record<string, boolean>;
-type RowSelectionState = Record<string, true>;
-type TableUpdater<T> = T | ((old: T) => T);
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchInput.trim());
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
-const pageSizeItems = [
-  { label: "10", value: 10 },
-  { label: "25", value: 25 },
-  { label: "50", value: 50 },
-];
+  React.useEffect(() => {
+    setCursorHistory([]);
+  }, [debouncedSearch, severityFilter, statusFilter, toolFilter, repositoryFilter]);
 
-function FindingsContent() {
-  const searchParams = useSearchParams();
-  const stateParam = searchParams.get("state");
-  const isLoading = stateParam === "loading";
-  const isEmpty = stateParam === "empty";
+  const currentCursor = cursorHistory[cursorHistory.length - 1];
 
-  // Banner dismiss local state
-  const [bannerDismissed, setBannerDismissed] = React.useState(false);
-
-  // Filters state
-  const [searchQuery, setSearchQuery] = React.useState("");
-  const [severityFilter, setSeverityFilter] = React.useState<Set<Severity>>(
-    new Set()
-  );
-  const [statusFilter, setStatusFilter] = React.useState<Set<FindingStatus>>(
-    new Set()
-  );
-  const [repoFilter, setRepoFilter] = React.useState<Set<string>>(new Set());
-
-  // Table state
-  const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({
-    select: true,
-    severity: true,
-    title: true,
-    file: true,
-    status: true,
-    actions: true,
-  });
-  const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
-  const [pagination, setPagination] = React.useState({
-    pageIndex: 0,
-    pageSize: 10,
+  const reposQuery = useRepositories({ status: ["CONNECTED"], limit: 100 });
+  const findingsQuery = useFindings({
+    cursor: currentCursor,
+    limit: 25,
+    repositoryId: repositoryFilter === "ALL" ? undefined : repositoryFilter,
+    severity: severityFilter.length > 0 ? severityFilter : undefined,
+    status: statusFilter.length > 0 ? statusFilter : undefined,
+    tool: toolFilter.length > 0 ? toolFilter : undefined,
+    search: debouncedSearch || undefined,
   });
 
-  // Detail Sheet state & interactive findings dataset
-  const [findingsList, setFindingsList] = React.useState<Finding[]>(mockFindings);
-  const [selectedFinding, setSelectedFinding] = React.useState<Finding | null>(
-    null
-  );
-  const [sheetOpen, setSheetOpen] = React.useState(false);
-  const [copiedFile, setCopiedFile] = React.useState(false);
+  const updateStatusMutation = useUpdateFindingStatus();
 
-  const handleUpdateFindingStatus = React.useCallback(
-    (findingId: string, nextStatus: FindingStatus, actionLabel: string) => {
-      setFindingsList((prev) =>
-        prev.map((item) =>
-          item.id === findingId ? { ...item, status: nextStatus } : item
-        )
-      );
-      setSelectedFinding((prev) =>
-        prev && prev.id === findingId ? { ...prev, status: nextStatus } : prev
-      );
-      toast.success(`${findingId}: ${actionLabel}`);
-    },
-    []
-  );
+  const items = findingsQuery.data?.items ?? [];
+  const repos = reposQuery.data?.items ?? [];
 
-  // Available repositories from findings
-  const allRepositories = React.useMemo(() => {
-    return Array.from(new Set(findingsList.map((f) => f.repository))).sort();
-  }, [findingsList]);
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(new Set(items.map((i) => i.id)));
+    } else {
+      setSelectedIds(new Set());
+    }
+  };
 
-  // Filtered dataset
-  const filteredFindings = React.useMemo(() => {
-    if (isEmpty) return [];
-    return findingsList.filter((item) => {
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matches =
-          item.title.toLowerCase().includes(q) ||
-          item.file.toLowerCase().includes(q) ||
-          item.ruleId.toLowerCase().includes(q) ||
-          item.id.toLowerCase().includes(q) ||
-          item.repository.toLowerCase().includes(q);
-        if (!matches) return false;
-      }
-      if (severityFilter.size > 0 && !severityFilter.has(item.severity)) {
-        return false;
-      }
-      if (statusFilter.size > 0 && !statusFilter.has(item.status)) {
-        return false;
-      }
-      if (repoFilter.size > 0 && !repoFilter.has(item.repository)) {
-        return false;
-      }
-      return true;
-    });
-  }, [isEmpty, findingsList, searchQuery, severityFilter, statusFilter, repoFilter]);
+  const handleSelectRow = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const next = new Set(selectedIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelectedIds(next);
+  };
 
   const handleCopyPath = (filePath: string) => {
     navigator.clipboard.writeText(filePath);
-    setCopiedFile(true);
-    setTimeout(() => setCopiedFile(false), 2000);
+    setCopiedPath(true);
+    toast.success("Path copied to clipboard");
+    setTimeout(() => setCopiedPath(false), 2000);
   };
 
-  const handleOpenDetail = (finding: Finding) => {
-    setSelectedFinding(finding);
-    setSheetOpen(true);
+  const handleStatusChange = async (findingId: string, status: "OPEN" | "ACCEPTED" | "REJECTED") => {
+    try {
+      await updateStatusMutation.mutateAsync({ findingId, status });
+      if (activeFinding && activeFinding.id === findingId) {
+        setActiveFinding({ ...activeFinding, status });
+      }
+      toast.success(`Marked as ${status.toLowerCase()}`);
+    } catch {
+      toast.error("Failed to update status");
+    }
   };
 
-  const handleClearAllFilters = () => {
-    setSearchQuery("");
-    setSeverityFilter(new Set());
-    setStatusFilter(new Set());
-    setRepoFilter(new Set());
-  };
-
-  const handleViewCritical = () => {
-    setSeverityFilter(new Set(["Critical"]));
-    setSearchQuery("");
-    setStatusFilter(new Set());
-    setRepoFilter(new Set());
-  };
-
-  const toggleSeverity = (val: Severity) => {
-    setSeverityFilter((prev) => {
-      const next = new Set(prev);
-      if (next.has(val)) next.delete(val);
-      else next.add(val);
-      return next;
-    });
-  };
-
-  const toggleStatus = (val: FindingStatus) => {
-    setStatusFilter((prev) => {
-      const next = new Set(prev);
-      if (next.has(val)) next.delete(val);
-      else next.add(val);
-      return next;
-    });
-  };
-
-  const toggleRepo = (val: string) => {
-    setRepoFilter((prev) => {
-      const next = new Set(prev);
-      if (next.has(val)) next.delete(val);
-      else next.add(val);
-      return next;
-    });
-  };
-
-  const columns = React.useMemo<ColumnDef<Finding, unknown>[]>(
-    () => [
-      {
-        id: "select",
-        header: ({ table }) => (
-          <div className="flex items-center justify-center">
-            <Checkbox
-              checked={table.getIsAllPageRowsSelected()}
-              indeterminate={table.getIsSomePageRowsSelected()}
-              onCheckedChange={(val) => table.toggleAllPageRowsSelected(!!val)}
-              aria-label="Select all findings on current page"
-            />
-          </div>
-        ),
-        cell: ({ row }) => (
-          <div
-            className="flex items-center justify-center"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Checkbox
-              checked={row.getIsSelected()}
-              onCheckedChange={(val) => row.toggleSelected(!!val)}
-              aria-label={`Select finding ${row.original.id}`}
-            />
-          </div>
-        ),
-        enableSorting: false,
-        enableHiding: false,
-      },
-      {
-        accessorKey: "severity",
-        header: ({ column }) => {
-          const sorted = column.getIsSorted();
-          return (
-            <button
-              type="button"
-              className="flex items-center gap-1 font-semibold text-xs text-muted-foreground hover:text-foreground cursor-pointer select-none outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              onClick={column.getToggleSortingHandler()}
-            >
-              <span>Severity</span>
-              {sorted === "asc" ? (
-                <ArrowUpIcon className="size-3 text-foreground" />
-              ) : sorted === "desc" ? (
-                <ArrowDownIcon className="size-3 text-foreground" />
-              ) : (
-                <ArrowUpDownIcon className="size-3 opacity-40" />
-              )}
-            </button>
-          );
-        },
-        cell: ({ row }) => <SeverityBadge severity={row.original.severity} />,
-      },
-      {
-        accessorKey: "title",
-        header: ({ column }) => {
-          const sorted = column.getIsSorted();
-          return (
-            <button
-              type="button"
-              className="flex items-center gap-1 font-semibold text-xs text-muted-foreground hover:text-foreground cursor-pointer select-none outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              onClick={column.getToggleSortingHandler()}
-            >
-              <span>Finding</span>
-              {sorted === "asc" ? (
-                <ArrowUpIcon className="size-3 text-foreground" />
-              ) : sorted === "desc" ? (
-                <ArrowDownIcon className="size-3 text-foreground" />
-              ) : (
-                <ArrowUpDownIcon className="size-3 opacity-40" />
-              )}
-            </button>
-          );
-        },
-        cell: ({ row }) => (
-          <div className="flex items-center gap-2 max-w-md truncate">
-            <span className="font-mono text-xs text-muted-foreground shrink-0">
-              {row.original.ruleId}
-            </span>
-            <span className="truncate font-medium text-foreground">
-              {row.original.title}
-            </span>
-          </div>
-        ),
-      },
-      {
-        accessorKey: "file",
-        header: ({ column }) => {
-          const sorted = column.getIsSorted();
-          return (
-            <button
-              type="button"
-              className="flex items-center gap-1 font-semibold text-xs text-muted-foreground hover:text-foreground cursor-pointer select-none outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              onClick={column.getToggleSortingHandler()}
-            >
-              <span>File</span>
-              {sorted === "asc" ? (
-                <ArrowUpIcon className="size-3 text-foreground" />
-              ) : sorted === "desc" ? (
-                <ArrowDownIcon className="size-3 text-foreground" />
-              ) : (
-                <ArrowUpDownIcon className="size-3 opacity-40" />
-              )}
-            </button>
-          );
-        },
-        cell: ({ row }) => (
-          <code
-            className="font-mono text-xs text-muted-foreground truncate block max-w-xs"
-            title={row.original.file}
-          >
-            {row.original.file}
-          </code>
-        ),
-      },
-      {
-        accessorKey: "status",
-        header: ({ column }) => {
-          const sorted = column.getIsSorted();
-          return (
-            <button
-              type="button"
-              className="flex items-center gap-1 font-semibold text-xs text-muted-foreground hover:text-foreground cursor-pointer select-none outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              onClick={column.getToggleSortingHandler()}
-            >
-              <span>Status</span>
-              {sorted === "asc" ? (
-                <ArrowUpIcon className="size-3 text-foreground" />
-              ) : sorted === "desc" ? (
-                <ArrowDownIcon className="size-3 text-foreground" />
-              ) : (
-                <ArrowUpDownIcon className="size-3 opacity-40" />
-              )}
-            </button>
-          );
-        },
-        cell: ({ row }) => <StatusIndicator status={row.original.status} />,
-      },
-      {
-        id: "actions",
-        header: () => <span className="sr-only">Actions</span>,
-        cell: ({ row }) => (
-          <div
-            className="flex items-center justify-end"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <DropdownMenu>
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <DropdownMenuTrigger
-                      render={
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          aria-label="Row actions"
-                        />
-                      }
-                    />
-                  }
-                >
-                  <MoreHorizontalIcon />
-                </TooltipTrigger>
-                <TooltipContent>Row actions</TooltipContent>
-              </Tooltip>
-              <DropdownMenuContent align="end" className="w-44">
-                <DropdownMenuGroup>
-                  <DropdownMenuItem
-                    onClick={() => handleOpenDetail(row.original)}
-                    className="cursor-pointer"
-                  >
-                    <EyeIcon data-icon="inline-start" />
-                    <span>View details</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => handleCopyPath(row.original.file)}
-                    className="cursor-pointer"
-                  >
-                    <CopyIcon data-icon="inline-start" />
-                    <span>Copy file path</span>
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuGroup>
-                  <DropdownMenuItem
-                    className="cursor-pointer"
-                    onClick={() =>
-                      handleUpdateFindingStatus(
-                        row.original.id,
-                        "Triaged",
-                        "Marked as triaged"
-                      )
-                    }
-                  >
-                    <CheckCircle2Icon data-icon="inline-start" />
-                    <span>Accept</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    variant="destructive"
-                    className="cursor-pointer"
-                    onClick={() =>
-                      handleUpdateFindingStatus(
-                        row.original.id,
-                        "Fixed",
-                        "Dismissed from active queue"
-                      )
-                    }
-                  >
-                    <XCircleIcon data-icon="inline-start" />
-                    <span>Reject</span>
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        ),
-        enableSorting: false,
-        enableHiding: false,
-      },
-    ],
-    [handleUpdateFindingStatus]
-  );
-
-  const table = useLegacyTable({
-    data: filteredFindings,
-    columns,
-    state: {
-      sorting,
-      columnVisibility,
-      rowSelection,
-      pagination,
-    },
-    onSortingChange: (updater: TableUpdater<SortingState>) => {
-      setSorting(typeof updater === "function" ? updater(sorting) : updater);
-    },
-    onColumnVisibilityChange: (updater: TableUpdater<VisibilityState>) => {
-      setColumnVisibility(
-        typeof updater === "function" ? updater(columnVisibility) : updater
-      );
-    },
-    onRowSelectionChange: (updater: TableUpdater<RowSelectionState>) => {
-      setRowSelection(
-        typeof updater === "function" ? updater(rowSelection) : updater
-      );
-    },
-    onPaginationChange: (
-      updater: TableUpdater<{ pageIndex: number; pageSize: number }>
-    ) => {
-      setPagination(
-        typeof updater === "function" ? updater(pagination) : updater
-      );
-    },
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    enableRowSelection: true,
-    getRowId: (row: Finding) => row.id,
-  });
-
-  const selectedCount = Object.keys(rowSelection).length;
-  const totalFindingsCount = findingsList.length;
-  const filteredCount = filteredFindings.length;
   const hasActiveFilters =
-    searchQuery.trim().length > 0 ||
-    severityFilter.size > 0 ||
-    statusFilter.size > 0 ||
-    repoFilter.size > 0;
-
-  // Pagination calculation
-  const pageIndex = pagination.pageIndex;
-  const pageSize = pagination.pageSize;
-  const startItem = filteredCount === 0 ? 0 : pageIndex * pageSize + 1;
-  const endItem = Math.min((pageIndex + 1) * pageSize, filteredCount);
+    debouncedSearch.length > 0 ||
+    severityFilter.length > 0 ||
+    statusFilter.length > 0 ||
+    toolFilter.length > 0 ||
+    repositoryFilter !== "ALL";
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Page Header with Underline-style Tabs: Overview, Scans, Rules, Settings */}
       <PageHeader
         title="Findings"
-        description="Comprehensive inventory of triaged and outstanding review diagnostics."
+        description="Security, bugs, and secret findings detected across your repositories."
         actions={
-          // When rows are selected, the primary action is in the bulk action bar to avoid button duplication
-          selectedCount === 0 ? (
+          <div className="flex items-center gap-2">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <span className="inline-flex cursor-not-allowed" tabIndex={0}>
+                      <Button size="sm" disabled>
+                        Fix selected
+                      </Button>
+                    </span>
+                  }
+                />
+                <TooltipContent>
+                  Pick one finding and use Draft a fix. Pull requests arrive in a later step.
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
             <Button
-              variant="default"
-              disabled={isLoading || isEmpty}
-              aria-label="Fix selected (0)"
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={findingsQuery.isFetching}
+              onClick={() => void findingsQuery.refetch()}
             >
-              <WrenchIcon data-icon="inline-start" />
-              <span>Fix selected (0)</span>
+              <RefreshCwIcon data-icon="inline-start" />
+              Refresh
             </Button>
-          ) : null
+          </div>
         }
       />
 
-      {/* Info Banner: Dismissible Alert above stat cards */}
-      {!bannerDismissed && !isLoading && !isEmpty && (
-        <Alert className="flex items-center justify-between rounded-lg border border-border bg-card p-3 shadow-none">
-          <div className="flex items-center gap-2.5">
-            <ShieldAlertIcon className="text-destructive" />
-            <span className="text-sm font-medium text-foreground">
-              3 critical findings need attention.
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleViewCritical}>
-              View critical
-            </Button>
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    onClick={() => setBannerDismissed(true)}
-                    aria-label="Dismiss banner"
-                  />
-                }
-              >
-                <XIcon />
-              </TooltipTrigger>
-              <TooltipContent>Dismiss</TooltipContent>
-            </Tooltip>
-          </div>
-        </Alert>
-      )}
-
-      {/* 4 Stat Cards: rounded-lg, 1px border, 20px padding (p-5), muted subtext line */}
-      {/* KPI Stat Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Open findings"
-          value={
-            isLoading ? (
-              <Skeleton className="h-8 w-16" />
-            ) : isEmpty ? (
-              "0"
-            ) : (
-              findingsList.filter((f) => f.status !== "Fixed").length
-            )
-          }
-          description="Active across all connected repos"
-        />
-        <StatCard
-          title="Critical"
-          value={
-            isLoading ? (
-              <Skeleton className="h-8 w-12" />
-            ) : isEmpty ? (
-              "0"
-            ) : (
-              findingsList.filter(
-                (f) => f.severity === "Critical" && f.status !== "Fixed"
-              ).length
-            )
-          }
-          valueClassName="text-destructive"
-          description="Merge-blocking priority tier"
-        />
-        <StatCard
-          title="Scans today"
-          value={isLoading ? <Skeleton className="h-8 w-14" /> : isEmpty ? "0" : "18"}
-          description="3 currently running"
-        />
-        <StatCard
-          title="Queue lag"
-          value={isLoading ? <Skeleton className="h-8 w-16" /> : "0.4s"}
-          valueClassName="text-success"
-          description="Optimal scanner throughput"
-        />
-      </div>
-
-      {/* Main Table Card (rounded-lg, 1px border, no shadow) */}
-      <Card className="rounded-lg border border-border bg-card shadow-none overflow-hidden">
-        {/* Table Card Header: Title & description left, Export button right */}
-        <CardHeader className="border-b border-border px-5 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex flex-col gap-0.5">
-              <CardTitle className="text-base font-semibold">
-                Findings list
-              </CardTitle>
-              <CardDescription>
-                Review detected security vulnerabilities, performance regressions, and style issues.
-              </CardDescription>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={isLoading || isEmpty}
-              aria-label="Export findings"
-            >
-              <DownloadIcon data-icon="inline-start" />
-              <span>Export</span>
-            </Button>
-          </div>
-        </CardHeader>
-
-        {/* Bulk Action Bar (E): Shown when rows are selected */}
-        {!isLoading && !isEmpty && selectedCount > 0 && (
-          <div className="flex items-center justify-between border-b border-border bg-muted/40 px-5 py-2.5">
-            <span className="text-xs font-medium text-foreground">
-              {selectedCount} selected
-            </span>
-            <div className="flex items-center gap-2">
-              {/* Single Primary Action per screen */}
-              <Button
-                variant="default"
-                size="sm"
-                aria-label={`Fix selected (${selectedCount})`}
-              >
-                <WrenchIcon data-icon="inline-start" />
-                <span>Fix selected ({selectedCount})</span>
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setRowSelection({})}
-              >
-                Reject
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setRowSelection({})}
-              >
-                Clear selection
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Table Toolbar (C): Inside the card above the table */}
-        <div className="border-b border-border p-4 flex flex-col gap-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            {/* Search Input and Filter Dropdowns */}
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Search with InputGroup */}
-              <InputGroup className="w-full sm:w-64">
+      <Card>
+        <CardContent className="flex flex-col gap-4 pt-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
+              <InputGroup className="w-full sm:max-w-xs">
                 <InputGroupAddon>
                   <SearchIcon />
                 </InputGroupAddon>
                 <InputGroupInput
-                  id="findings-search"
                   type="search"
-                  placeholder="Search findings..."
-                  aria-label="Search findings"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  disabled={isLoading || isEmpty}
+                  placeholder="Search findings, rules, files..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
                 />
               </InputGroup>
 
-              {/* Severity Filter Dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={isLoading || isEmpty}
-                      className="gap-1.5"
-                    />
-                  }
-                >
-                  <SlidersHorizontalIcon />
-                  <span>Severity</span>
-                  {severityFilter.size > 0 && (
-                    <Badge
-                      variant="secondary"
-                      className="ml-0.5 size-4 p-0 justify-center text-[10px]"
-                    >
-                      {severityFilter.size}
-                    </Badge>
-                  )}
-                  <ChevronDownIcon />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-40">
-                  <DropdownMenuLabel>Filter by severity</DropdownMenuLabel>
-                  <DropdownMenuGroup>
-                    {(["Critical", "High", "Medium", "Low"] as Severity[]).map(
-                      (sev) => (
-                        <DropdownMenuCheckboxItem
-                          key={sev}
-                          checked={severityFilter.has(sev)}
-                          onCheckedChange={() => toggleSeverity(sev)}
-                        >
-                          {sev}
-                        </DropdownMenuCheckboxItem>
-                      )
-                    )}
-                  </DropdownMenuGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* Status Filter Dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={isLoading || isEmpty}
-                      className="gap-1.5"
-                    />
-                  }
-                >
-                  <span>Status</span>
-                  {statusFilter.size > 0 && (
-                    <Badge
-                      variant="secondary"
-                      className="ml-0.5 size-4 p-0 justify-center text-[10px]"
-                    >
-                      {statusFilter.size}
-                    </Badge>
-                  )}
-                  <ChevronDownIcon />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-40">
-                  <DropdownMenuLabel>Filter by status</DropdownMenuLabel>
-                  <DropdownMenuGroup>
-                    {(["Open", "Triaged", "In progress", "Fixed"] as FindingStatus[]).map(
-                      (stat) => (
-                        <DropdownMenuCheckboxItem
-                          key={stat}
-                          checked={statusFilter.has(stat)}
-                          onCheckedChange={() => toggleStatus(stat)}
-                        >
-                          {stat}
-                        </DropdownMenuCheckboxItem>
-                      )
-                    )}
-                  </DropdownMenuGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* Repository Filter Dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={isLoading || isEmpty}
-                      className="gap-1.5"
-                    />
-                  }
-                >
-                  <span>Repository</span>
-                  {repoFilter.size > 0 && (
-                    <Badge
-                      variant="secondary"
-                      className="ml-0.5 size-4 p-0 justify-center text-[10px]"
-                    >
-                      {repoFilter.size}
-                    </Badge>
-                  )}
-                  <ChevronDownIcon />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-52">
-                  <DropdownMenuLabel>Filter by repository</DropdownMenuLabel>
-                  <DropdownMenuGroup>
-                    {allRepositories.map((repo) => (
-                      <DropdownMenuCheckboxItem
-                        key={repo}
-                        checked={repoFilter.has(repo)}
-                        onCheckedChange={() => toggleRepo(repo)}
-                      >
-                        {repo}
-                      </DropdownMenuCheckboxItem>
+              {/* Repository filter */}
+              <Select
+                value={repositoryFilter}
+                onValueChange={(val) => val && setRepositoryFilter(val)}
+              >
+                <SelectTrigger className="w-full sm:w-56" size="sm">
+                  <SelectValue placeholder="All repositories">
+                    {(val: string | null) => {
+                      if (!val || val === "ALL") return "All repositories";
+                      return (
+                        repos.find((r) => r.id === val)?.fullName ??
+                        "All repositories"
+                      );
+                    }}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="ALL">All repositories</SelectItem>
+                    {repos.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>
+                        {r.fullName}
+                      </SelectItem>
                     ))}
-                  </DropdownMenuGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* Columns Visibility Dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={isLoading || isEmpty}
-                      className="gap-1.5"
-                    />
-                  }
-                >
-                  <ColumnsIcon />
-                  <span>Columns</span>
-                  <ChevronDownIcon />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-40">
-                  <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
-                  <DropdownMenuGroup>
-                    {table
-                      .getAllColumns()
-                      .filter((col) => col.getCanHide())
-                      .map((col) => {
-                        const colLabels: Record<string, string> = {
-                          severity: "Severity",
-                          title: "Finding",
-                          file: "File",
-                          status: "Status",
-                        };
-                        return (
-                          <DropdownMenuCheckboxItem
-                            key={col.id}
-                            checked={col.getIsVisible()}
-                            onCheckedChange={(checked) =>
-                              col.toggleVisibility(!!checked)
-                            }
-                          >
-                            {colLabels[col.id] ?? col.id}
-                          </DropdownMenuCheckboxItem>
-                        );
-                      })}
-                  </DropdownMenuGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </div>
 
-            {/* Result count on the right */}
-            <div className="flex items-center justify-end text-xs text-muted-foreground whitespace-nowrap">
-              {isLoading ? (
-                <Skeleton className="h-4 w-20" />
-              ) : isEmpty ? (
-                "0 findings"
-              ) : hasActiveFilters ? (
-                `${filteredCount} of ${totalFindingsCount} findings`
-              ) : (
-                `${totalFindingsCount} findings`
-              )}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Severity filter */}
+              <ToggleGroup
+                variant="outline"
+                size="sm"
+                value={severityFilter}
+                onValueChange={(vals) => setSeverityFilter(vals as FindingSeverity[])}
+              >
+                <ToggleGroupItem value="CRITICAL">Critical</ToggleGroupItem>
+                <ToggleGroupItem value="HIGH">High</ToggleGroupItem>
+                <ToggleGroupItem value="MEDIUM">Medium</ToggleGroupItem>
+                <ToggleGroupItem value="LOW">Low</ToggleGroupItem>
+              </ToggleGroup>
+
+              {/* Status filter */}
+              <ToggleGroup
+                variant="outline"
+                size="sm"
+                value={statusFilter}
+                onValueChange={(vals) => setStatusFilter(vals as FindingStatus[])}
+              >
+                <ToggleGroupItem value="OPEN">Open</ToggleGroupItem>
+                <ToggleGroupItem value="ACCEPTED">Accepted</ToggleGroupItem>
+                <ToggleGroupItem value="REJECTED">Rejected</ToggleGroupItem>
+                <ToggleGroupItem value="FIXED">Fixed</ToggleGroupItem>
+              </ToggleGroup>
             </div>
           </div>
 
-          {/* Removable Filter Chips below toolbar */}
-          {!isLoading && !isEmpty && hasActiveFilters && (
-            <div className="flex flex-wrap items-center gap-1.5 pt-1">
-              {searchQuery.trim() && (
-                <Badge
-                  variant="secondary"
-                  className="gap-1 pr-1 pl-2 text-xs font-normal"
-                >
-                  <span>Query: &ldquo;{searchQuery}&rdquo;</span>
-                  <button
-                    type="button"
-                    onClick={() => setSearchQuery("")}
-                    className="rounded-full hover:bg-muted p-0.5 outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
-                    aria-label="Remove search query filter"
-                  >
-                    <XIcon className="size-3" />
-                  </button>
+          {/* Active Filter Chips */}
+          {hasActiveFilters && (
+            <div className="flex flex-wrap items-center gap-2 pt-2 border-t text-xs">
+              <span className="text-muted-foreground">Filters:</span>
+              {repositoryFilter !== "ALL" && (
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  Repo: {repos.find((r) => r.id === repositoryFilter)?.fullName}
+                  <XIcon
+                    className="size-3 cursor-pointer"
+                    onClick={() => setRepositoryFilter("ALL")}
+                  />
                 </Badge>
               )}
-
-              {Array.from(severityFilter).map((sev) => (
-                <Badge
-                  key={sev}
-                  variant="secondary"
-                  className="gap-1 pr-1 pl-2 text-xs font-normal"
-                >
-                  <span>Severity: {sev}</span>
-                  <button
-                    type="button"
-                    onClick={() => toggleSeverity(sev)}
-                    className="rounded-full hover:bg-muted p-0.5 outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
-                    aria-label={`Remove ${sev} severity filter`}
-                  >
-                    <XIcon className="size-3" />
-                  </button>
+              {severityFilter.map((s) => (
+                <Badge key={s} variant="secondary" className="flex items-center gap-1">
+                  {s}
+                  <XIcon
+                    className="size-3 cursor-pointer"
+                    onClick={() =>
+                      setSeverityFilter(severityFilter.filter((x) => x !== s))
+                    }
+                  />
                 </Badge>
               ))}
-
-              {Array.from(statusFilter).map((stat) => (
-                <Badge
-                  key={stat}
-                  variant="secondary"
-                  className="gap-1 pr-1 pl-2 text-xs font-normal"
-                >
-                  <span>Status: {stat}</span>
-                  <button
-                    type="button"
-                    onClick={() => toggleStatus(stat)}
-                    className="rounded-full hover:bg-muted p-0.5 outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
-                    aria-label={`Remove ${stat} status filter`}
-                  >
-                    <XIcon className="size-3" />
-                  </button>
+              {statusFilter.map((st) => (
+                <Badge key={st} variant="secondary" className="flex items-center gap-1">
+                  {st}
+                  <XIcon
+                    className="size-3 cursor-pointer"
+                    onClick={() =>
+                      setStatusFilter(statusFilter.filter((x) => x !== st))
+                    }
+                  />
                 </Badge>
               ))}
-
-              {Array.from(repoFilter).map((repo) => (
-                <Badge
-                  key={repo}
-                  variant="secondary"
-                  className="gap-1 pr-1 pl-2 text-xs font-normal"
-                >
-                  <span>Repo: {repo}</span>
-                  <button
-                    type="button"
-                    onClick={() => toggleRepo(repo)}
-                    className="rounded-full hover:bg-muted p-0.5 outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
-                    aria-label={`Remove ${repo} repository filter`}
-                  >
-                    <XIcon className="size-3" />
-                  </button>
+              {debouncedSearch && (
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  &quot;{debouncedSearch}&quot;
+                  <XIcon
+                    className="size-3 cursor-pointer"
+                    onClick={() => setSearchInput("")}
+                  />
                 </Badge>
-              ))}
-
-              <button
-                type="button"
-                onClick={handleClearAllFilters}
-                className="text-xs text-muted-foreground hover:text-foreground font-medium underline underline-offset-2 ml-1 cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-xs"
+                onClick={() => {
+                  setSearchInput("");
+                  setSeverityFilter([]);
+                  setStatusFilter([]);
+                  setToolFilter([]);
+                  setRepositoryFilter("ALL");
+                }}
               >
                 Clear all
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Card Content: Table / Skeletons / Empty State */}
-        <CardContent className="p-0">
-          {isLoading ? (
-            /* Skeleton Loading State keeping table layout and 44px rows */
-            <div className="flex flex-col divide-y divide-border">
-              <div className="flex h-11 items-center bg-muted/50 px-4 gap-4">
-                <Skeleton className="size-4" />
-                <Skeleton className="h-4 w-16" />
-                <Skeleton className="h-4 w-48" />
-                <Skeleton className="h-4 w-36" />
-                <Skeleton className="h-4 w-16" />
-                <Skeleton className="ml-auto size-4" />
-              </div>
-              {Array.from({ length: 8 }).map((_, idx) => (
-                <div key={idx} className="flex h-11 items-center px-4 gap-4">
-                  <Skeleton className="size-4" />
-                  <Skeleton className="h-5 w-16 rounded-md" />
-                  <Skeleton className="h-4 w-60" />
-                  <Skeleton className="h-4 w-44" />
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="ml-auto size-4" />
-                </div>
-              ))}
-            </div>
-          ) : isEmpty ? (
-            /* Empty State (no findings yet) */
-            <div className="p-8">
-              <EmptyState
-                icon={<ShieldCheckIcon className="size-7 text-muted-foreground" />}
-                title="No findings yet"
-                description="Connect your repository to start scanning pull requests and commits."
-                action={
-                  <Button variant="outline">
-                    Connect repository
-                  </Button>
-                }
-              />
-            </div>
-          ) : filteredCount === 0 ? (
-            /* Filter produced no results */
-            <div className="flex flex-col items-center justify-center p-12 gap-2 text-center">
-              <span className="text-sm font-semibold text-foreground">
-                No findings match your filters
-              </span>
-              <p className="text-xs text-muted-foreground max-w-sm">
-                No diagnostic records match the selected severity, status, repository, or search terms.
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleClearAllFilters}
-                className="mt-2"
-              >
-                Clear filters
               </Button>
-            </div>
-          ) : (
-            /* Table with sortable headers, 44px rows, hairline dividers, no zebra */
-            <Table>
-              <TableHeader>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow
-                    key={headerGroup.id}
-                    className="h-11 bg-muted/50 border-b border-border hover:bg-muted/50"
-                  >
-                    {headerGroup.headers.map((header) => {
-                      const sorted = header.column.getIsSorted();
-                      return (
-                        <TableHead
-                          key={header.id}
-                          aria-sort={
-                            header.column.getCanSort()
-                              ? sorted === "asc"
-                                ? "ascending"
-                                : sorted === "desc"
-                                ? "descending"
-                                : "none"
-                              : undefined
-                          }
-                          className={cn(
-                            "px-4 text-xs font-semibold text-muted-foreground",
-                            header.id === "select" && "w-12 text-center",
-                            header.id === "severity" && "w-28",
-                            header.id === "status" && "w-32",
-                            header.id === "actions" && "w-12 text-right"
-                          )}
-                        >
-                          {header.isPlaceholder
-                            ? null
-                            : flexRender(
-                                header.column.columnDef.header,
-                                header.getContext()
-                              )}
-                        </TableHead>
-                      );
-                    })}
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody>
-                {table.getRowModel().rows.map((row) => {
-                  const isSelected = row.getIsSelected();
-
-                  return (
-                    <TableRow
-                      key={row.id}
-                      data-state={isSelected ? "selected" : undefined}
-                      onClick={() => handleOpenDetail(row.original)}
-                      className="h-11 border-b border-border transition-colors hover:bg-muted/40 cursor-pointer data-[state=selected]:bg-muted/50"
-                    >
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell
-                          key={cell.id}
-                          className={cn(
-                            "px-4 py-0 align-middle",
-                            cell.column.id === "select" && "text-center",
-                            cell.column.id === "actions" && "text-right"
-                          )}
-                        >
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
-                          )}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
-
-          {/* Pagination Footer (D) */}
-          {!isLoading && !isEmpty && filteredCount > 0 && (
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-t border-border px-5 py-3 gap-3">
-              {/* Rows per page select */}
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>Rows per page</span>
-                <Select
-                  items={pageSizeItems}
-                  value={pageSize}
-                  onValueChange={(val) => {
-                    if (val) table.setPageSize(Number(val));
-                  }}
-                >
-                  <SelectTrigger
-                    className="w-18 h-7 text-xs rounded-md"
-                    aria-label="Select rows per page"
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      {pageSizeItems.map((item) => (
-                        <SelectItem key={item.value} value={item.value}>
-                          {item.label}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* 1 to 10 of 42 text & Previous/Next pagination buttons */}
-              <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                <span>
-                  {startItem} to {endItem} of {filteredCount}
-                </span>
-                <div className="flex items-center gap-1">
-                  <Tooltip>
-                    <TooltipTrigger
-                      render={
-                        <Button
-                          variant="outline"
-                          size="icon-xs"
-                          onClick={() => table.previousPage()}
-                          disabled={!table.getCanPreviousPage()}
-                          aria-label="Previous page"
-                        />
-                      }
-                    >
-                      <ChevronLeftIcon />
-                    </TooltipTrigger>
-                    <TooltipContent>Previous page</TooltipContent>
-                  </Tooltip>
-
-                  <Tooltip>
-                    <TooltipTrigger
-                      render={
-                        <Button
-                          variant="outline"
-                          size="icon-xs"
-                          onClick={() => table.nextPage()}
-                          disabled={!table.getCanNextPage()}
-                          aria-label="Next page"
-                        />
-                      }
-                    >
-                      <ChevronRightIcon />
-                    </TooltipTrigger>
-                    <TooltipContent>Next page</TooltipContent>
-                  </Tooltip>
-                </div>
-              </div>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Detail Sheet Panel (F) */}
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent
-          side="right"
-          className="sm:max-w-md w-full flex flex-col p-0 gap-0"
-        >
-          {selectedFinding && (
-            <>
-              {/* Sheet Header with title, severity badge, status, file path */}
-              <SheetHeader className="border-b border-border p-5 flex flex-col gap-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <SeverityBadge severity={selectedFinding.severity} />
-                    <StatusIndicator status={selectedFinding.status} />
-                  </div>
-                  <span className="font-mono text-xs text-muted-foreground">
-                    {selectedFinding.id}
-                  </span>
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <SheetTitle className="text-base font-semibold text-foreground leading-snug">
-                    {selectedFinding.title}
-                  </SheetTitle>
-                  <SheetDescription className="sr-only">
-                    Detailed analysis and code remediation for finding {selectedFinding.id}
-                  </SheetDescription>
-                </div>
-
-                {/* File path box with copy button */}
-                <div className="flex items-center justify-between gap-2 rounded-md border border-border bg-muted/50 px-2.5 py-1.5 font-mono text-xs text-muted-foreground">
-                  <span className="truncate" title={selectedFinding.file}>
-                    {selectedFinding.file}
-                  </span>
-                  <Tooltip>
-                    <TooltipTrigger
-                      render={
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          onClick={() => handleCopyPath(selectedFinding.file)}
-                          aria-label="Copy file path"
-                        />
+      {findingsQuery.isLoading ? (
+        <Card>
+          <CardHeader className="border-b">
+            <Skeleton className="h-5 w-40" />
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3 pt-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-11 w-full" />
+            ))}
+          </CardContent>
+        </Card>
+      ) : findingsQuery.isError ? (
+        <Alert variant="destructive">
+          <AlertCircleIcon />
+          <AlertTitle>Failed to load findings</AlertTitle>
+          <AlertDescription>
+            {findingsQuery.error?.message || "An unexpected error occurred."}
+          </AlertDescription>
+          <AlertAction>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void findingsQuery.refetch()}
+            >
+              Retry
+            </Button>
+          </AlertAction>
+        </Alert>
+      ) : items.length === 0 ? (
+        <Card>
+          <CardContent className="py-12">
+            {hasActiveFilters ? (
+              <div className="flex flex-col items-center gap-3 text-center">
+                <span className="text-sm text-muted-foreground">
+                  No findings match your current filters.
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSearchInput("");
+                    setSeverityFilter([]);
+                    setStatusFilter([]);
+                    setToolFilter([]);
+                    setRepositoryFilter("ALL");
+                  }}
+                >
+                  Clear filters
+                </Button>
+              </div>
+            ) : (
+              <EmptyState
+                icon={<ShieldAlertIcon />}
+                title="No findings yet"
+                description="Push to a connected repository to run a scan and see vulnerabilities or security alerts."
+                action={
+                  <Button
+                    size="sm"
+                    render={<Link href="/repositories" />}
+                    nativeButton={false}
+                  >
+                    View repositories
+                  </Button>
+                }
+              />
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader className="border-b">
+            <div className="flex items-center justify-between">
+              <CardTitle>Findings</CardTitle>
+              <span className="text-xs text-muted-foreground">
+                Showing {items.length} items
+              </span>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow className="h-11 border-border">
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={
+                        selectedIds.size === items.length && items.length > 0
                       }
+                      onCheckedChange={handleSelectAll}
+                    />
+                  </TableHead>
+                  <TableHead>Severity</TableHead>
+                  <TableHead>Finding</TableHead>
+                  <TableHead>File</TableHead>
+                  <TableHead>Tool</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {items.map((finding) => {
+                  const isChecked = selectedIds.has(finding.id);
+                  const sev = SEVERITY_BADGES[finding.severity];
+                  const st = STATUS_DISPLAY[finding.status];
+
+                  return (
+                    <TableRow
+                      key={finding.id}
+                      className="h-11 border-border cursor-pointer hover:bg-muted/50"
+                      onClick={() => setActiveFinding(finding)}
                     >
-                      {copiedFile ? (
-                        <CheckIcon className="text-success" />
-                      ) : (
-                        <CopyIcon />
-                      )}
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {copiedFile ? "Copied!" : "Copy path"}
-                    </TooltipContent>
-                  </Tooltip>
+                      <TableCell onClick={(e) => handleSelectRow(finding.id, e)}>
+                        <Checkbox checked={isChecked} />
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={cn("text-xs font-semibold", sev.className)}
+                        >
+                          {sev.label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="font-medium text-sm text-foreground">
+                            {finding.title}
+                          </span>
+                          <span className="font-mono text-xs text-muted-foreground">
+                            {finding.ruleId}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger
+                              render={
+                                <span className="font-mono text-xs text-muted-foreground truncate max-w-[200px] block" />
+                              }
+                            >
+                              {finding.filePath}:{finding.startLine}
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {finding.filePath}:{finding.startLine}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          {finding.tool}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <span className="inline-flex items-center gap-1.5 text-xs text-foreground">
+                          <span
+                            className={cn(
+                              "size-2 shrink-0 rounded-full",
+                              st.dotClassName,
+                            )}
+                            aria-hidden="true"
+                          />
+                          {st.label}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+
+          {(cursorHistory.length > 0 || findingsQuery.data?.nextCursor) && (
+            <CardFooter className="justify-between border-t">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={cursorHistory.length === 0 || findingsQuery.isFetching}
+                onClick={() => setCursorHistory((prev) => prev.slice(0, -1))}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={
+                  !findingsQuery.data?.nextCursor || findingsQuery.isFetching
+                }
+                onClick={() => {
+                  if (findingsQuery.data?.nextCursor) {
+                    setCursorHistory((prev) => [
+                      ...prev,
+                      findingsQuery.data!.nextCursor!,
+                    ]);
+                  }
+                }}
+              >
+                Next
+              </Button>
+            </CardFooter>
+          )}
+        </Card>
+      )}
+
+      {/* Finding Details Sheet */}
+      <Sheet open={Boolean(activeFinding)} onOpenChange={(open) => !open && setActiveFinding(null)}>
+        {activeFinding && (
+          <SheetContent className="w-full sm:max-w-lg flex flex-col justify-between overflow-y-auto">
+            <div className="flex flex-col gap-6">
+              <SheetHeader>
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "text-xs font-semibold",
+                      SEVERITY_BADGES[activeFinding.severity].className,
+                    )}
+                  >
+                    {SEVERITY_BADGES[activeFinding.severity].label}
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    {activeFinding.tool}
+                  </Badge>
+                  <Badge variant="secondary" className="text-xs">
+                    {activeFinding.category}
+                  </Badge>
                 </div>
+                <SheetTitle className="text-lg pt-2">{activeFinding.title}</SheetTitle>
+                <SheetDescription className="font-mono text-xs">
+                  {activeFinding.ruleId}
+                </SheetDescription>
               </SheetHeader>
 
-              {/* Sheet Body: Why it matters markdown view */}
-              <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-3">
-                <span className="text-xs font-semibold tracking-tight text-foreground uppercase">
-                  Why it matters
+              {/* File details with copy button */}
+              <div className="flex flex-col gap-1.5 p-3 rounded-lg border bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground font-medium">
+                    Location
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-1.5 text-xs text-muted-foreground"
+                    onClick={() => handleCopyPath(activeFinding.filePath)}
+                  >
+                    {copiedPath ? <CheckIcon className="size-3" /> : <CopyIcon className="size-3" />}
+                    Copy path
+                  </Button>
+                </div>
+                <span className="font-mono text-xs break-all">
+                  {activeFinding.filePath}:{activeFinding.startLine}
+                  {activeFinding.endLine !== activeFinding.startLine &&
+                    `-${activeFinding.endLine}`}
                 </span>
-                <div className="rounded-md border border-border bg-card p-4">
-                  <MarkdownView>{selectedFinding.description}</MarkdownView>
-                </div>
-
-                <div className="flex flex-col gap-1 text-xs text-muted-foreground pt-2">
-                  <div className="flex items-center justify-between py-1 border-b border-border">
-                    <span>Repository</span>
-                    <span className="font-mono text-foreground font-medium">
-                      {selectedFinding.repository}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between py-1 border-b border-border">
-                    <span>Rule ID</span>
-                    <span className="font-mono text-foreground font-medium">
-                      {selectedFinding.ruleId}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between py-1">
-                    <span>Status</span>
-                    <span className="text-foreground font-medium">
-                      {selectedFinding.status}
-                    </span>
-                  </div>
-                </div>
+                <span className="text-xs text-muted-foreground pt-1">
+                  Repository: {activeFinding.repository.fullName}
+                </span>
               </div>
 
-              {/* Sheet Footer: Accept, Reject, and primary Fix this */}
-              <SheetFooter className="border-t border-border p-4 flex flex-row items-center justify-end gap-2 bg-card">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    handleUpdateFindingStatus(
-                      selectedFinding.id,
-                      "Triaged",
-                      "Accepted into remediation backlog"
-                    );
-                    setSheetOpen(false);
-                  }}
-                >
-                  Accept
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    handleUpdateFindingStatus(
-                      selectedFinding.id,
-                      "Fixed",
-                      "Marked as dismissed"
-                    );
-                    setSheetOpen(false);
-                  }}
-                >
-                  Reject
-                </Button>
-                {/* Single main action per screen / modal */}
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => {
-                    handleUpdateFindingStatus(
-                      selectedFinding.id,
-                      "Fixed",
-                      "Automated patch PR queued"
-                    );
-                    setSheetOpen(false);
-                  }}
-                >
-                  <WrenchIcon data-icon="inline-start" />
-                  <span>Fix this</span>
-                </Button>
-              </SheetFooter>
-            </>
-          )}
-        </SheetContent>
+              {/* Message */}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs font-medium text-foreground">Details</span>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {activeFinding.message}
+                </p>
+              </div>
+
+              {/* Snippet */}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs font-medium text-foreground">Code Snippet</span>
+                {activeFinding.category === "SECRET" ? (
+                  <div className="p-3 rounded-md bg-muted/50 border text-xs text-muted-foreground italic">
+                    Secret value hidden for safety
+                  </div>
+                ) : activeFinding.snippet ? (
+                  <pre className="p-3 rounded-md bg-muted font-mono text-xs overflow-x-auto whitespace-pre leading-snug">
+                    {activeFinding.snippet}
+                  </pre>
+                ) : (
+                  <div className="p-3 rounded-md bg-muted/30 border text-xs text-muted-foreground">
+                    No snippet available
+                  </div>
+                )}
+              </div>
+
+              {/* AI Assist Section */}
+              <FindingAiAssist finding={activeFinding} />
+            </div>
+
+            {/* Actions footer */}
+            <SheetFooter className="border-t pt-4 flex flex-row items-center justify-between sm:justify-between w-full">
+              <span className="text-xs text-muted-foreground">
+                Status: {STATUS_DISPLAY[activeFinding.status].label}
+              </span>
+              <div className="flex items-center gap-2">
+                {activeFinding.status !== "ACCEPTED" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={updateStatusMutation.isPending}
+                    onClick={() => handleStatusChange(activeFinding.id, "ACCEPTED")}
+                  >
+                    Accept
+                  </Button>
+                )}
+                {activeFinding.status !== "REJECTED" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={updateStatusMutation.isPending}
+                    onClick={() => handleStatusChange(activeFinding.id, "REJECTED")}
+                  >
+                    Reject
+                  </Button>
+                )}
+                {activeFinding.status !== "OPEN" && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    disabled={updateStatusMutation.isPending}
+                    onClick={() => handleStatusChange(activeFinding.id, "OPEN")}
+                  >
+                    Reopen
+                  </Button>
+                )}
+              </div>
+            </SheetFooter>
+          </SheetContent>
+        )}
       </Sheet>
     </div>
-  );
-}
-
-export default function FindingsPage() {
-  return (
-    <React.Suspense
-      fallback={
-        <div className="flex flex-col gap-6">
-          <Skeleton className="h-12 w-48" />
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Skeleton className="h-24 w-full rounded-lg" />
-            <Skeleton className="h-24 w-full rounded-lg" />
-            <Skeleton className="h-24 w-full rounded-lg" />
-            <Skeleton className="h-24 w-full rounded-lg" />
-          </div>
-          <Skeleton className="h-96 w-full rounded-lg" />
-        </div>
-      }
-    >
-      <FindingsContent />
-    </React.Suspense>
   );
 }

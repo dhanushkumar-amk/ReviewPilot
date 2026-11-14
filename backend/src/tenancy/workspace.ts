@@ -99,3 +99,31 @@ export async function requireWorkspace(
   };
 }
 
+export function canManageWorkspace(role: string | undefined): boolean {
+  const normalized = role?.trim().toLowerCase();
+  return normalized === "owner" || normalized === "admin";
+}
+
+/**
+ * Fastify preHandler requiring an authenticated workspace session with owner or admin role.
+ */
+export async function requireWorkspaceAdmin(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<void> {
+  await requireWorkspace(request, reply);
+  if (reply.sent) {
+    return;
+  }
+
+  if (!canManageWorkspace(request.workspace?.role)) {
+    return reply.status(403).send({
+      error: {
+        code: "FORBIDDEN",
+        message: "Only workspace owners and admins can perform this action",
+        requestId: request.id,
+      },
+    });
+  }
+}
+

@@ -40,14 +40,18 @@ function buildUrl(path: string): string {
   return `${base}${normalizedPath}`;
 }
 
-export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+export async function apiFetch<T>(
+  path: string,
+  init?: RequestInit & { timeoutMs?: number }
+): Promise<T> {
   const controller = new AbortController();
   let timedOut = false;
+  const timeoutMs = init?.timeoutMs ?? REQUEST_TIMEOUT_MS;
 
   const timeoutId = setTimeout(() => {
     timedOut = true;
     controller.abort();
-  }, REQUEST_TIMEOUT_MS);
+  }, timeoutMs);
 
   const externalSignal = init?.signal;
   const handleExternalAbort = () => {
@@ -66,13 +70,20 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   if (!headers.has("Accept")) {
     headers.set("Accept", "application/json");
   }
-  if (!headers.has("Content-Type") && !(init?.body instanceof FormData)) {
+  if (
+    init?.body !== undefined &&
+    !headers.has("Content-Type") &&
+    !(init.body instanceof FormData)
+  ) {
     headers.set("Content-Type", "application/json");
   }
 
+  const { timeoutMs: _unusedTimeoutMs, ...fetchInit } = init ?? {};
+  void _unusedTimeoutMs;
+
   try {
     const response = await fetch(buildUrl(path), {
-      ...init,
+      ...fetchInit,
       headers,
       credentials: "include",
       signal: controller.signal,

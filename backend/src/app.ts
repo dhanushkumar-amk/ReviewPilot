@@ -8,14 +8,20 @@ import { env } from "./env.js";
 import { inngest } from "./inngest/client.js";
 import { functions } from "./inngest/index.js";
 import { devRoutes } from "./routes/dev.js";
+import { githubRoutes } from "./routes/github.js";
 import { healthRoutes } from "./routes/health.js";
 import { authRoutes } from "./routes/auth.js";
 import { meRoutes } from "./routes/me.js";
 import { repositoryRoutes } from "./routes/repositories.js";
+import { scanRoutes } from "./routes/scans.js";
+import { webhookRoutes } from "./routes/webhooks.js";
+import { findingRoutes } from "./routes/findings.js";
+import { aiRoutes } from "./routes/ai.js";
+import { logStartupProviders } from "./ai/providers.js";
 
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9._-]{1,128}$/;
 
-function sanitizeRequestUrl(rawUrl: string): string {
+export function sanitizeRequestUrl(rawUrl: string): string {
   const queryIndex = rawUrl.indexOf("?");
   if (queryIndex === -1) {
     return rawUrl;
@@ -30,7 +36,7 @@ function sanitizeRequestUrl(rawUrl: string): string {
   let redacted = false;
   for (const key of ["code", "state", "access_token", "refresh_token", "id_token"]) {
     if (params.has(key)) {
-      params.set(key, "[REDACTED]");
+      params.set(key, "REDACTED");
       redacted = true;
     }
   }
@@ -93,6 +99,13 @@ export async function buildApp(): Promise<FastifyInstance> {
         "*.id_token",
         "*.clientSecret",
         "*.client_secret",
+        "*.privateKey",
+        "*.private_key",
+        "*.token",
+        "*.userToken",
+        "*.installationToken",
+        "*.GITHUB_APP_PRIVATE_KEY_BASE64",
+        "*.GITHUB_APP_CLIENT_SECRET",
       ],
       serializers: {
         req(request) {
@@ -158,7 +171,14 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(healthRoutes);
   await app.register(authRoutes);
   await app.register(meRoutes);
+  await app.register(githubRoutes);
   await app.register(repositoryRoutes);
+  await app.register(scanRoutes);
+  await app.register(webhookRoutes);
+  await app.register(findingRoutes);
+  await app.register(aiRoutes);
+
+  logStartupProviders(app.log);
 
   await app.register(async (inngestScope) => {
     inngestScope.addHook("onRoute", (routeOptions) => {
@@ -180,3 +200,5 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   return app;
 }
+
+export const buildServer = buildApp;

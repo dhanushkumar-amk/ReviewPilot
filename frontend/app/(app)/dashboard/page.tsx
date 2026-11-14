@@ -8,11 +8,11 @@ import {
   CheckCircle2Icon,
   CircleDashedIcon,
   FolderGit2Icon,
-  GitBranchIcon,
 } from "lucide-react";
 
 import { PageHeader } from "@/components/app-shell/page-header";
 import { DemoDashboard } from "@/components/dashboard/demo-dashboard";
+import { ConnectGitHubButton } from "@/components/github/connect-github-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,13 +25,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { useGithubInstallations } from "@/src/features/github/use-github";
 import { formatWorkspaceRole, useWorkspace } from "@/src/features/me/use-me";
+import { useRepositories } from "@/src/features/repositories/use-repositories";
+import { useScans } from "@/src/features/scans/use-scans";
+import { useFindingsSummary } from "@/src/features/findings/use-findings";
+import { StatCard } from "@/components/app-shell/stat-card";
+import { ActivityIcon, ShieldAlertIcon, ShieldCheckIcon } from "lucide-react";
 
 interface OnboardingStep {
   id: string;
@@ -47,13 +47,36 @@ export default function DashboardPage() {
     process.env.NODE_ENV === "development" && searchParams.get("demo") === "1";
 
   const { user, activeWorkspace, workspaces } = useWorkspace();
+  const installationsQuery = useGithubInstallations({ enabled: !isDemoMode });
+  const connectedReposQuery = useRepositories(
+    { status: ["CONNECTED"], limit: 1 },
+    { enabled: !isDemoMode }
+  );
+  const completedScansQuery = useScans(
+    { status: "COMPLETED", limit: 1 },
+    { enabled: !isDemoMode }
+  );
+  const findingsSummaryQuery = useFindingsSummary({ enabled: !isDemoMode });
 
   if (isDemoMode) {
     return <DemoDashboard />;
   }
 
+  const summary = findingsSummaryQuery.data;
+  const lastScanDuration = summary?.lastScan?.durationMs
+    ? `${Math.round(summary.lastScan.durationMs / 1000)}s`
+    : summary?.lastScan?.status
+      ? summary.lastScan.status
+      : "—";
+
+  const hasCompletedScan = (completedScansQuery.data?.items.length ?? 0) > 0;
+
   const workspaceName = activeWorkspace?.name ?? "Personal workspace";
   const workspaceRole = formatWorkspaceRole(activeWorkspace?.role);
+
+  const hasGithubInstallation =
+    (installationsQuery.data?.installations.length ?? 0) > 0;
+  const hasConnectedRepository = (connectedReposQuery.data?.total ?? 0) > 0;
 
   const steps: OnboardingStep[] = [
     {
@@ -61,7 +84,7 @@ export default function DashboardPage() {
       title: "Create your account",
       description: user?.email
         ? `Signed in as ${user.email} in ${workspaceName}.`
-        : `Account verified and personal workspace initialized.`,
+        : "Account verified and personal workspace initialized.",
       done: true,
     },
     {
@@ -69,23 +92,18 @@ export default function DashboardPage() {
       title: "Connect GitHub",
       description:
         "Install the ReviewPilot GitHub App to authorize repository discovery and pull request webhooks.",
-      done: false,
-      action: (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <span className="inline-flex cursor-not-allowed" tabIndex={0} />
-              }
-            >
-              <Button type="button" variant="outline" size="sm" disabled>
-                <GitBranchIcon data-icon="inline-start" />
-                Connect GitHub
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Available in the next step</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+      done: hasGithubInstallation,
+      action: hasGithubInstallation ? (
+        <Button
+          variant="outline"
+          size="sm"
+          render={<Link href="/repositories" />}
+          nativeButton={false}
+        >
+          Manage
+        </Button>
+      ) : (
+        <ConnectGitHubButton variant="outline" size="sm" />
       ),
     },
     {
@@ -93,14 +111,44 @@ export default function DashboardPage() {
       title: "Choose a repository",
       description:
         "Select which repositories inside this workspace should receive automated code and security reviews.",
-      done: false,
+      done: hasConnectedRepository,
+      action:
+        hasGithubInstallation && !hasConnectedRepository ? (
+          <Button
+            variant="outline"
+            size="sm"
+            render={<Link href="/repositories" />}
+            nativeButton={false}
+          >
+            Select repository
+          </Button>
+        ) : undefined,
     },
     {
       id: "scan",
       title: "Run your first scan",
       description:
-        "Open a pull request or trigger a baseline security scan to see findings and remediation verdicts.",
-      done: false,
+        "Push to a connected repository's default branch or trigger a manual scan to see your scan history.",
+      done: hasCompletedScan,
+      action: hasCompletedScan ? (
+        <Button
+          variant="outline"
+          size="sm"
+          render={<Link href="/scans" />}
+          nativeButton={false}
+        >
+          View scans
+        </Button>
+      ) : hasConnectedRepository ? (
+        <Button
+          variant="outline"
+          size="sm"
+          render={<Link href="/repositories" />}
+          nativeButton={false}
+        >
+          Run a scan
+        </Button>
+      ) : undefined,
     },
   ];
 
@@ -123,6 +171,37 @@ export default function DashboardPage() {
           </Button>
         }
       />
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Open findings"
+          value={summary?.open ?? 0}
+          description="Total active findings across repositories"
+          icon={ShieldAlertIcon}
+        />
+        <StatCard
+          title="Critical severity"
+          value={summary?.critical ?? 0}
+          description="Vulnerabilities needing immediate attention"
+          icon={ShieldAlertIcon}
+        />
+        <StatCard
+          title="Scans today"
+          value={summary?.scansToday ?? 0}
+          description="Total scans completed or run today"
+          icon={ActivityIcon}
+        />
+        <StatCard
+          title="Last scan duration"
+          value={lastScanDuration}
+          description={
+            summary?.lastScan?.finishedAt
+              ? `Completed ${new Date(summary.lastScan.finishedAt).toLocaleTimeString()}`
+              : "No scans finished yet"
+          }
+          icon={ShieldCheckIcon}
+        />
+      </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card className="min-w-0 lg:col-span-2">
