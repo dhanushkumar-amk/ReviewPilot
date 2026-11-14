@@ -4,11 +4,16 @@ import * as React from "react";
 import Link from "next/link";
 import {
   AlertCircleIcon,
+  CheckCircle2Icon,
   CheckIcon,
   CopyIcon,
+  FileCode2Icon,
+  GitBranchIcon,
   RefreshCwIcon,
+  RotateCcwIcon,
   SearchIcon,
   ShieldAlertIcon,
+  XCircleIcon,
   XIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -564,80 +569,130 @@ export default function FindingsPage() {
       {/* Finding Details Sheet */}
       <Sheet open={Boolean(activeFinding)} onOpenChange={(open) => !open && setActiveFinding(null)}>
         {activeFinding && (
-          <SheetContent className="w-full sm:max-w-lg flex flex-col justify-between overflow-y-auto">
-            <div className="flex flex-col gap-6">
-              <SheetHeader>
-                <div className="flex items-center gap-2">
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      "text-xs font-semibold",
-                      SEVERITY_BADGES[activeFinding.severity].className,
-                    )}
-                  >
-                    {SEVERITY_BADGES[activeFinding.severity].label}
-                  </Badge>
-                  <Badge variant="outline" className="text-xs">
-                    {activeFinding.tool}
-                  </Badge>
-                  <Badge variant="secondary" className="text-xs">
-                    {activeFinding.category}
-                  </Badge>
-                </div>
-                <SheetTitle className="text-lg pt-2">{activeFinding.title}</SheetTitle>
-                <SheetDescription className="font-mono text-xs">
+          <SheetContent className="w-full sm:max-w-xl md:max-w-2xl p-0 flex flex-col justify-between overflow-hidden shadow-2xl">
+            {/* Header */}
+            <div className="p-6 pb-4 border-b border-border/80 flex flex-col gap-3.5 bg-muted/20">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "text-xs font-semibold px-2 py-0.5",
+                    SEVERITY_BADGES[activeFinding.severity].className,
+                  )}
+                >
+                  {SEVERITY_BADGES[activeFinding.severity].label}
+                </Badge>
+                <Badge variant="outline" className="text-xs px-2 py-0.5 font-mono">
+                  {activeFinding.tool}
+                </Badge>
+                <Badge variant="secondary" className="text-xs px-2 py-0.5">
+                  {activeFinding.category}
+                </Badge>
+                <span className="ml-auto text-xs font-mono text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-md border border-border/50">
                   {activeFinding.ruleId}
-                </SheetDescription>
-              </SheetHeader>
+                </span>
+              </div>
 
-              {/* File details with copy button */}
-              <div className="flex flex-col gap-1.5 p-3 rounded-lg border bg-muted/30">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground font-medium">
-                    Location
-                  </span>
+              <div>
+                <SheetTitle className="text-base font-semibold leading-snug tracking-tight text-foreground">
+                  {activeFinding.title}
+                </SheetTitle>
+                <SheetDescription className="sr-only">
+                  {activeFinding.ruleId} finding details and AI remediation
+                </SheetDescription>
+              </div>
+            </div>
+
+            {/* Scrollable Body */}
+            <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-5">
+              {/* File Location Card */}
+              <div className="rounded-xl border border-border/80 bg-card p-3.5 flex flex-col gap-2.5 shadow-2xs">
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5 font-medium text-muted-foreground">
+                    <FileCode2Icon className="size-3.5 text-primary" />
+                    <span>File Location</span>
+                  </div>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-6 px-1.5 text-xs text-muted-foreground"
+                    className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
                     onClick={() => handleCopyPath(activeFinding.filePath)}
                   >
-                    {copiedPath ? <CheckIcon className="size-3" /> : <CopyIcon className="size-3" />}
-                    Copy path
+                    {copiedPath ? (
+                      <>
+                        <CheckIcon className="size-3 text-success mr-1" />
+                        <span className="text-success font-medium">Copied</span>
+                      </>
+                    ) : (
+                      <>
+                        <CopyIcon className="size-3 mr-1" />
+                        <span>Copy path</span>
+                      </>
+                    )}
                   </Button>
                 </div>
-                <span className="font-mono text-xs break-all">
-                  {activeFinding.filePath}:{activeFinding.startLine}
-                  {activeFinding.endLine !== activeFinding.startLine &&
-                    `-${activeFinding.endLine}`}
-                </span>
-                <span className="text-xs text-muted-foreground pt-1">
-                  Repository: {activeFinding.repository.fullName}
-                </span>
+
+                <div className="rounded-lg bg-muted/60 px-3 py-2 font-mono text-xs text-foreground flex items-center justify-between gap-3 overflow-hidden border border-border/50">
+                  <span className="truncate">{activeFinding.filePath}</span>
+                  <span className="shrink-0 text-muted-foreground font-semibold bg-background px-1.5 py-0.5 rounded-md border border-border/60">
+                    L{activeFinding.startLine}
+                    {activeFinding.endLine !== activeFinding.startLine && `-${activeFinding.endLine}`}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 text-xs text-muted-foreground pt-0.5">
+                  <GitBranchIcon className="size-3" />
+                  <span>Repository:</span>
+                  <span className="font-medium text-foreground">{activeFinding.repository.fullName}</span>
+                </div>
               </div>
 
-              {/* Message */}
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-medium text-foreground">Details</span>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {activeFinding.message}
-                </p>
-              </div>
+              {/* Finding Details message (if different from title) */}
+              {activeFinding.message && activeFinding.message.trim() !== activeFinding.title.trim() && (
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Finding Details
+                  </span>
+                  <p className="text-xs text-foreground/90 bg-muted/20 border border-border/70 rounded-lg p-3 leading-relaxed">
+                    {activeFinding.message}
+                  </p>
+                </div>
+              )}
 
-              {/* Snippet */}
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-medium text-foreground">Code Snippet</span>
+              {/* Code Snippet Card */}
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Code Context
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    Line {activeFinding.startLine}
+                  </span>
+                </div>
+
                 {activeFinding.category === "SECRET" ? (
-                  <div className="p-3 rounded-md bg-muted/50 border text-xs text-muted-foreground italic">
-                    Secret value hidden for safety
+                  <div className="rounded-xl border border-destructive/25 bg-destructive/5 p-4 flex items-start gap-3">
+                    <ShieldAlertIcon className="size-4 text-destructive shrink-0 mt-0.5" />
+                    <div className="flex flex-col gap-1 text-xs">
+                      <span className="font-semibold text-destructive">Secret Value Masked</span>
+                      <p className="text-muted-foreground leading-relaxed">
+                        To protect your credentials, raw secret values are redacted and never displayed in the console or browser.
+                      </p>
+                    </div>
                   </div>
                 ) : activeFinding.snippet ? (
-                  <pre className="p-3 rounded-md bg-muted font-mono text-xs overflow-x-auto whitespace-pre leading-snug">
-                    {activeFinding.snippet}
-                  </pre>
+                  <div className="rounded-xl border border-border overflow-hidden bg-muted/40 shadow-2xs">
+                    <div className="bg-muted/70 px-3.5 py-1.5 border-b border-border/60 flex items-center justify-between text-xs text-muted-foreground font-mono">
+                      <span>{activeFinding.filePath.split("/").pop()}</span>
+                      <span>Lines {activeFinding.startLine}–{activeFinding.endLine}</span>
+                    </div>
+                    <pre className="p-3.5 font-mono text-xs overflow-x-auto whitespace-pre leading-relaxed text-foreground">
+                      {activeFinding.snippet}
+                    </pre>
+                  </div>
                 ) : (
-                  <div className="p-3 rounded-md bg-muted/30 border text-xs text-muted-foreground">
-                    No snippet available
+                  <div className="p-4 rounded-xl bg-muted/20 border border-dashed text-xs text-muted-foreground text-center">
+                    No source code snippet available for this finding
                   </div>
                 )}
               </div>
@@ -646,19 +701,25 @@ export default function FindingsPage() {
               <FindingAiAssist finding={activeFinding} />
             </div>
 
-            {/* Actions footer */}
-            <SheetFooter className="border-t pt-4 flex flex-row items-center justify-between sm:justify-between w-full">
-              <span className="text-xs text-muted-foreground">
-                Status: {STATUS_DISPLAY[activeFinding.status].label}
-              </span>
+            {/* Actions Footer */}
+            <SheetFooter className="border-t border-border/80 p-4 px-6 flex flex-row items-center justify-between w-full bg-muted/20">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Status:</span>
+                <span className="inline-flex items-center gap-1.5 text-xs font-medium">
+                  <span className={cn("size-2 rounded-full", STATUS_DISPLAY[activeFinding.status].dotClassName)} />
+                  {STATUS_DISPLAY[activeFinding.status].label}
+                </span>
+              </div>
               <div className="flex items-center gap-2">
                 {activeFinding.status !== "ACCEPTED" && (
                   <Button
                     variant="outline"
                     size="sm"
+                    className="h-8 text-xs font-medium"
                     disabled={updateStatusMutation.isPending}
                     onClick={() => handleStatusChange(activeFinding.id, "ACCEPTED")}
                   >
+                    <CheckCircle2Icon data-icon="inline-start" className="size-3 text-link" />
                     Accept
                   </Button>
                 )}
@@ -666,9 +727,11 @@ export default function FindingsPage() {
                   <Button
                     variant="outline"
                     size="sm"
+                    className="h-8 text-xs font-medium"
                     disabled={updateStatusMutation.isPending}
                     onClick={() => handleStatusChange(activeFinding.id, "REJECTED")}
                   >
+                    <XCircleIcon data-icon="inline-start" className="size-3 text-muted-foreground" />
                     Reject
                   </Button>
                 )}
@@ -676,9 +739,11 @@ export default function FindingsPage() {
                   <Button
                     variant="default"
                     size="sm"
+                    className="h-8 text-xs font-medium"
                     disabled={updateStatusMutation.isPending}
                     onClick={() => handleStatusChange(activeFinding.id, "OPEN")}
                   >
+                    <RotateCcwIcon data-icon="inline-start" className="size-3" />
                     Reopen
                   </Button>
                 )}

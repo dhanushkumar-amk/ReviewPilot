@@ -4,10 +4,13 @@ import * as React from "react";
 import {
   AlertCircleIcon,
   BotIcon,
+  CheckCircle2Icon,
   CheckIcon,
   InfoIcon,
+  ShieldAlertIcon,
   SparklesIcon,
   Wand2Icon,
+  XCircleIcon,
   XIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -17,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Tooltip,
   TooltipContent,
@@ -109,37 +113,41 @@ export function FindingAiAssist({ finding }: FindingAiAssistProps) {
   };
 
   return (
-    <div className="flex flex-col gap-4 border-t pt-4">
+    <div className="flex flex-col gap-4 border-t border-border/80 pt-5">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5 font-semibold text-sm text-foreground">
-          <BotIcon className="size-4 text-link" />
-          AI Assist
+        <div className="flex items-center gap-2">
+          <div className="size-6 rounded-md bg-primary/10 text-primary flex items-center justify-center">
+            <SparklesIcon className="size-3.5" />
+          </div>
+          <div>
+            <div className="font-semibold text-xs uppercase tracking-wider text-foreground">AI Remediation</div>
+            <p className="text-[11px] text-muted-foreground">Automated explanations & fix proposals</p>
+          </div>
         </div>
         {aiEnabled && (
-          <Badge variant="secondary" className="text-xs">
-            Enabled
+          <Badge variant="outline" className="text-xs font-normal text-muted-foreground bg-muted/30">
+            AI Active
           </Badge>
         )}
       </div>
 
       {!aiEnabled ? (
-        <Alert variant="default" className="bg-muted/40">
+        <Alert variant="default" className="bg-muted/30 border-dashed">
           <InfoIcon />
-          <AlertTitle>AI Assist is off</AlertTitle>
-          <AlertDescription className="text-xs">
+          <AlertTitle className="text-xs font-medium">AI Assist is off</AlertTitle>
+          <AlertDescription className="text-xs text-muted-foreground">
             {isOwnerOrAdmin ? (
-              <div className="flex flex-col gap-2 pt-1">
+              <div className="flex flex-col gap-2 pt-1.5">
                 <span>
-                  Enable AI assist to generate automated explanations and draft code
-                  remediations.
+                  Enable AI assist to generate automated explanations and draft code remediations.
                 </span>
                 <Button
                   size="sm"
                   variant="outline"
-                  className="w-fit"
+                  className="w-fit h-7 text-xs"
                   onClick={() => setDisclosureOpen(true)}
                 >
-                  <SparklesIcon data-icon="inline-start" />
+                  <SparklesIcon data-icon="inline-start" className="size-3" />
                   Enable AI Assist
                 </Button>
               </div>
@@ -149,11 +157,11 @@ export function FindingAiAssist({ finding }: FindingAiAssistProps) {
           </AlertDescription>
         </Alert>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           {errorMessage && (
             <Alert variant="destructive">
               <AlertCircleIcon />
-              <AlertTitle>AI Assist Error</AlertTitle>
+              <AlertTitle className="text-xs">AI Assist Error</AlertTitle>
               <AlertDescription className="text-xs">{errorMessage}</AlertDescription>
             </Alert>
           )}
@@ -164,15 +172,16 @@ export function FindingAiAssist({ finding }: FindingAiAssistProps) {
               type="button"
               variant="outline"
               size="sm"
+              className="h-8 text-xs font-medium"
               disabled={explainMutation.isPending}
               onClick={handleExplain}
             >
               {explainMutation.isPending ? (
                 <Spinner data-icon="inline-start" />
               ) : (
-                <BotIcon data-icon="inline-start" />
+                <BotIcon data-icon="inline-start" className="size-3.5" />
               )}
-              Explain this finding
+              {explanation ? "Re-explain" : "Explain finding"}
             </Button>
 
             {!isSecret && (
@@ -180,187 +189,197 @@ export function FindingAiAssist({ finding }: FindingAiAssistProps) {
                 type="button"
                 variant="outline"
                 size="sm"
+                className="h-8 text-xs font-medium"
                 disabled={draftFixMutation.isPending || finding.status === "FIXED"}
                 onClick={handleDraftFix}
               >
                 {draftFixMutation.isPending ? (
                   <Spinner data-icon="inline-start" />
                 ) : (
-                  <Wand2Icon data-icon="inline-start" />
+                  <Wand2Icon data-icon="inline-start" className="size-3.5 text-primary" />
                 )}
-                Draft a fix
+                {fixProposal ? "Re-draft fix" : "Draft a fix"}
               </Button>
             )}
           </div>
 
           {/* Explanation Output */}
           {explanation && (
-            <Card className="bg-muted/30">
-              <CardHeader className="py-3 px-4 border-b flex flex-row items-center justify-between">
-                <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  AI Explanation
-                </CardTitle>
+            <Card className="border border-border/80 shadow-2xs overflow-hidden">
+              <CardHeader className="py-2.5 px-4 bg-muted/30 border-b border-border/60 flex flex-row items-center justify-between">
                 <div className="flex items-center gap-2">
+                  <BotIcon className="size-3.5 text-primary" />
+                  <CardTitle className="text-xs font-semibold text-foreground">
+                    Explanation
+                  </CardTitle>
+                </div>
+                <div className="flex items-center gap-1.5">
                   {explanation.cached && (
-                    <Badge variant="outline" className="text-xs h-5">
+                    <Badge variant="outline" className="text-[10px] h-4.5 px-1.5 text-muted-foreground">
                       Cached
                     </Badge>
                   )}
                   {explanation.redacted && (
-                    <Badge variant="outline" className="text-xs h-5">
+                    <Badge variant="outline" className="text-[10px] h-4.5 px-1.5 text-muted-foreground">
                       Redacted
                     </Badge>
                   )}
                 </div>
               </CardHeader>
-              <CardContent className="p-4 flex flex-col gap-4 text-xs">
-                <div>
-                  <span className="font-semibold text-foreground block mb-1">
-                    Summary
-                  </span>
-                  <MarkdownView>{explanation.summary}</MarkdownView>
-                </div>
-                <div>
-                  <span className="font-semibold text-foreground block mb-1">
-                    Why it matters
-                  </span>
-                  <MarkdownView>{explanation.whyItMatters}</MarkdownView>
-                </div>
-                <div>
-                  <span className="font-semibold text-foreground block mb-1">
-                    How to fix
-                  </span>
-                  <MarkdownView>{explanation.howToFix}</MarkdownView>
-                </div>
+              <CardContent className="p-4 pt-3 flex flex-col gap-3 text-xs">
+                <Tabs defaultValue="summary" className="w-full">
+                  <TabsList className="w-full grid grid-cols-3 h-7 p-0.5 bg-muted/60">
+                    <TabsTrigger value="summary" className="text-[11px] py-1">
+                      Summary
+                    </TabsTrigger>
+                    <TabsTrigger value="risk" className="text-[11px] py-1">
+                      Why it matters
+                    </TabsTrigger>
+                    <TabsTrigger value="fix" className="text-[11px] py-1">
+                      How to fix
+                    </TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="summary" className="pt-3 text-foreground leading-relaxed">
+                    <MarkdownView>{explanation.summary}</MarkdownView>
+                  </TabsContent>
+                  <TabsContent value="risk" className="pt-3 text-foreground leading-relaxed">
+                    <MarkdownView>{explanation.whyItMatters}</MarkdownView>
+                  </TabsContent>
+                  <TabsContent value="fix" className="pt-3 text-foreground leading-relaxed">
+                    <MarkdownView>{explanation.howToFix}</MarkdownView>
+                  </TabsContent>
+                </Tabs>
               </CardContent>
             </Card>
           )}
 
           {/* Cannot fix message */}
           {canFixOutcome && (
-            <Alert variant="default">
+            <Alert variant="default" className="bg-muted/20 border-dashed">
               <InfoIcon />
-              <AlertTitle>No Automated Fix Available</AlertTitle>
-              <AlertDescription className="text-xs">{canFixOutcome}</AlertDescription>
+              <AlertTitle className="text-xs">No Automated Fix Available</AlertTitle>
+              <AlertDescription className="text-xs text-muted-foreground">{canFixOutcome}</AlertDescription>
             </Alert>
           )}
 
           {/* Fix Proposal Output */}
           {fixProposal && (
-            <Card className="border border-border">
-              <CardHeader className="py-3 px-4 border-b flex flex-row items-center justify-between">
+            <Card className="border border-border/80 shadow-2xs overflow-hidden">
+              <CardHeader className="py-2.5 px-4 bg-muted/30 border-b border-border/60 flex flex-row items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Fix Draft
+                  <Wand2Icon className="size-3.5 text-primary" />
+                  <CardTitle className="text-xs font-semibold text-foreground">
+                    Remediation Patch
                   </CardTitle>
                   <Badge
-                    variant={
-                      fixProposal.confidence === "HIGH"
-                        ? "success"
-                        : fixProposal.confidence === "MEDIUM"
-                          ? "link"
-                          : "outline"
-                    }
-                    className="text-xs h-5"
+                    variant="outline"
+                    className="text-[10px] h-4.5 px-1.5"
                   >
-                    {fixProposal.confidence} confidence
+                    {fixProposal.confidence.toLowerCase()} confidence
                   </Badge>
                 </div>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-6 px-2 text-xs text-muted-foreground"
+                  className="h-6 px-2 text-[11px] text-muted-foreground hover:text-destructive"
                   disabled={discardMutation.isPending}
                   onClick={() => handleDiscard(fixProposal.id)}
                 >
                   Discard
                 </Button>
               </CardHeader>
-              <CardContent className="p-4 flex flex-col gap-4">
-                <p className="text-xs text-muted-foreground leading-relaxed">
+              <CardContent className="p-4 flex flex-col gap-3.5">
+                <p className="text-xs text-foreground/90 leading-relaxed bg-muted/20 p-2.5 rounded-md border border-border/60">
                   {fixProposal.explanation}
                 </p>
 
-                {/* Diff Viewer with plain semantic styling */}
-                <div className="rounded-md border bg-muted/60 p-3 font-mono text-xs overflow-x-auto leading-snug">
-                  {fixProposal.diff.split("\n").map((line, idx) => {
-                    const isAdded = line.startsWith("+") && !line.startsWith("+++");
-                    const isRemoved = line.startsWith("-") && !line.startsWith("---");
-                    const isHunk = line.startsWith("@@");
+                {/* Diff Viewer with semantic styling */}
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Proposed Diff
+                  </span>
+                  <div className="rounded-lg border border-border bg-muted/40 p-3 font-mono text-xs overflow-x-auto leading-snug">
+                    {fixProposal.diff.split("\n").map((line, idx) => {
+                      const isAdded = line.startsWith("+") && !line.startsWith("+++");
+                      const isRemoved = line.startsWith("-") && !line.startsWith("---");
+                      const isHunk = line.startsWith("@@");
 
-                    return (
-                      <div
-                        key={idx}
-                        className={
-                          isAdded
-                            ? "bg-success/15 text-success px-1 rounded-xs"
-                            : isRemoved
-                              ? "bg-destructive/15 text-destructive px-1 rounded-xs"
-                              : isHunk
-                                ? "text-muted-foreground italic py-0.5"
-                                : "text-foreground px-1"
-                        }
-                      >
-                        {line}
-                      </div>
-                    );
-                  })}
+                      return (
+                        <div
+                          key={idx}
+                          className={
+                            isAdded
+                              ? "bg-success/15 text-success px-1.5 py-0.5 rounded-xs"
+                              : isRemoved
+                                ? "bg-destructive/15 text-destructive px-1.5 py-0.5 rounded-xs"
+                                : isHunk
+                                  ? "text-muted-foreground italic py-0.5"
+                                  : "text-foreground px-1.5 py-0.5"
+                          }
+                        >
+                          {line}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {/* Checks List */}
-                <div className="flex flex-col gap-1.5 p-3 rounded-md border bg-card text-xs">
-                  <span className="font-semibold text-foreground pb-1">
-                    Verification Checks
+                <div className="flex flex-col gap-2 p-3 rounded-lg border border-border/70 bg-card text-xs">
+                  <span className="font-semibold text-foreground text-[11px] uppercase tracking-wider">
+                    Safety & Static Verification
                   </span>
-                  <div className="flex items-center gap-2">
-                    {fixProposal.checks.patchApplies ? (
-                      <CheckIcon className="size-3.5 text-success" />
-                    ) : (
-                      <XIcon className="size-3.5 text-destructive" />
-                    )}
-                    <span>Patch applies cleanly</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {fixProposal.checks.withinFile ? (
-                      <CheckIcon className="size-3.5 text-success" />
-                    ) : (
-                      <XIcon className="size-3.5 text-destructive" />
-                    )}
-                    <span>Stays within target file</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {fixProposal.checks.sizeOk ? (
-                      <CheckIcon className="size-3.5 text-success" />
-                    ) : (
-                      <XIcon className="size-3.5 text-destructive" />
-                    )}
-                    <span>Replacement size within limits</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {fixProposal.checks.staticRecheck?.findingGone ? (
-                      <CheckIcon className="size-3.5 text-success" />
-                    ) : (
-                      <XIcon className="size-3.5 text-destructive" />
-                    )}
-                    <span>Static re-check: original finding resolved</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {!fixProposal.checks.staticRecheck?.newIssues ? (
-                      <CheckIcon className="size-3.5 text-success" />
-                    ) : (
-                      <XIcon className="size-3.5 text-destructive" />
-                    )}
-                    <span>Static re-check: no new high-severity issues</span>
+                  <div className="grid grid-cols-1 gap-1.5 pt-0.5">
+                    <div className="flex items-center gap-2">
+                      {fixProposal.checks.patchApplies ? (
+                        <CheckCircle2Icon className="size-3.5 text-success shrink-0" />
+                      ) : (
+                        <XCircleIcon className="size-3.5 text-destructive shrink-0" />
+                      )}
+                      <span>Patch applies cleanly</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {fixProposal.checks.withinFile ? (
+                        <CheckCircle2Icon className="size-3.5 text-success shrink-0" />
+                      ) : (
+                        <XCircleIcon className="size-3.5 text-destructive shrink-0" />
+                      )}
+                      <span>Confined to target file boundary</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {fixProposal.checks.sizeOk ? (
+                        <CheckCircle2Icon className="size-3.5 text-success shrink-0" />
+                      ) : (
+                        <XCircleIcon className="size-3.5 text-destructive shrink-0" />
+                      )}
+                      <span>Replacement size within allowed limits</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {fixProposal.checks.staticRecheck?.findingGone ? (
+                        <CheckCircle2Icon className="size-3.5 text-success shrink-0" />
+                      ) : (
+                        <XCircleIcon className="size-3.5 text-destructive shrink-0" />
+                      )}
+                      <span>Static re-check: original finding resolved</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {!fixProposal.checks.staticRecheck?.newIssues ? (
+                        <CheckCircle2Icon className="size-3.5 text-success shrink-0" />
+                      ) : (
+                        <XCircleIcon className="size-3.5 text-destructive shrink-0" />
+                      )}
+                      <span>Static re-check: no new high-severity issues</span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-end gap-2 pt-2 border-t">
+                <div className="flex items-center justify-end gap-2 pt-1 border-t border-border/60">
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger
                         render={
                           <span className="inline-flex cursor-not-allowed">
-                            <Button size="sm" disabled>
+                            <Button size="sm" disabled className="h-8 text-xs font-medium">
                               Create pull request
                             </Button>
                           </span>
