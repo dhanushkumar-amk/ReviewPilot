@@ -255,3 +255,4 @@ export async function runHygieneAnalyzer(
   await walk(repoDir);
   return { findings };
 }
+
