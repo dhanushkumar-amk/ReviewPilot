@@ -115,37 +115,43 @@ export async function findingRoutes(app: FastifyInstance): Promise<void> {
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
 
-    const [openCount, critCount, highCount, medCount, lowCount, scansToday, lastScan] =
-      await Promise.all([
-        prisma.finding.count({ where: { ...wsWhere, status: "OPEN" } }),
-        prisma.finding.count({
-          where: { ...wsWhere, status: "OPEN", severity: "CRITICAL" },
-        }),
-        prisma.finding.count({
-          where: { ...wsWhere, status: "OPEN", severity: "HIGH" },
-        }),
-        prisma.finding.count({
-          where: { ...wsWhere, status: "OPEN", severity: "MEDIUM" },
-        }),
-        prisma.finding.count({
-          where: { ...wsWhere, status: "OPEN", severity: "LOW" },
-        }),
-        prisma.scan.count({
-          where: {
-            ...wsWhere,
-            createdAt: { gte: startOfToday },
-          },
-        }),
-        prisma.scan.findFirst({
-          where: { ...wsWhere, status: "COMPLETED" },
-          orderBy: { createdAt: "desc" },
-          select: {
-            status: true,
-            durationMs: true,
-            finishedAt: true,
-          },
-        }),
-      ]);
+    const [severityGroups, scansToday, lastScan] = await Promise.all([
+      prisma.finding.groupBy({
+        by: ["severity"],
+        where: { ...wsWhere, status: "OPEN" },
+        _count: { _all: true },
+      }),
+      prisma.scan.count({
+        where: {
+          ...wsWhere,
+          createdAt: { gte: startOfToday },
+        },
+      }),
+      prisma.scan.findFirst({
+        where: { ...wsWhere, status: "COMPLETED" },
+        orderBy: { createdAt: "desc" },
+        select: {
+          status: true,
+          durationMs: true,
+          finishedAt: true,
+        },
+      }),
+    ]);
+
+    let openCount = 0;
+    let critCount = 0;
+    let highCount = 0;
+    let medCount = 0;
+    let lowCount = 0;
+
+    for (const group of severityGroups) {
+      const count = group._count._all;
+      openCount += count;
+      if (group.severity === "CRITICAL") critCount = count;
+      else if (group.severity === "HIGH") highCount = count;
+      else if (group.severity === "MEDIUM") medCount = count;
+      else if (group.severity === "LOW") lowCount = count;
+    }
 
     return {
       open: openCount,
