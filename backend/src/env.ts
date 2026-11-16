@@ -85,6 +85,11 @@ const envSchema = z
     AI_MAX_CALLS_PER_WORKSPACE_PER_DAY: z.coerce.number().int().positive().default(20),
     AI_MAX_CALLS_GLOBAL_PER_DAY: z.coerce.number().int().positive().default(300),
     AI_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(25000),
+    E2B_API_KEY: optionalNonEmptyString,
+    SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(600000),
+    SANDBOX_MAX_PER_WORKSPACE_PER_DAY: z.coerce.number().int().positive().default(5),
+    SANDBOX_MAX_GLOBAL_PER_DAY: z.coerce.number().int().positive().default(30),
+    SANDBOX_MAX_ARCHIVE_MB: z.coerce.number().int().positive().default(50),
   })
   .superRefine((data, ctx) => {
     if (data.GROQ_API_KEY && !data.AI_MODEL_GROQ) {
@@ -199,3 +204,4 @@ export const githubAppPrivateKey: string = (() => {
 })();
 export const isGoogleAuthEnabled = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
 export const isGithubAuthEnabled = Boolean(env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET);
+export const isSandboxConfigured = Boolean(env.E2B_API_KEY);

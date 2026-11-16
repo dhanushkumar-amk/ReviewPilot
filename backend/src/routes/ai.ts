@@ -266,7 +266,30 @@ export async function aiRoutes(app: FastifyInstance): Promise<void> {
         });
       }
 
-      return { proposal };
+      const latestValidation = await prisma.fixValidation.findFirst({
+        where: {
+          fixProposalId: id,
+          workspaceId: request.workspace!.id,
+        },
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          status: true,
+          steps: true,
+          errorCode: true,
+          createdAt: true,
+          startedAt: true,
+          finishedAt: true,
+        },
+      });
+
+      return {
+        proposal: {
+          ...proposal,
+          latestValidation,
+        },
+        latestValidation,
+      };
     },
   );
 

@@ -98,6 +98,11 @@ model Organization {
   aiEnabled           Boolean              @default(false)
   aiEnabledBy         String?
   aiEnabledAt         DateTime?
+  sandboxEnabled      Boolean              @default(false)
+  sandboxEnabledBy    String?
+  sandboxEnabledAt    DateTime?
+  fixValidations      FixValidation[]
+  sandboxUsages       SandboxUsage[]
 
   @@unique([slug])
   @@map("organization")
@@ -381,10 +386,52 @@ model FixProposal {
   promptVersion   String
   createdByUserId String
   createdAt       DateTime              @default(now())
+  validations     FixValidation[]
 
   @@index([workspaceId])
   @@index([findingId])
   @@map("fix_proposal")
+}
+
+enum FixValidationStatus {
+  QUEUED
+  RUNNING
+  PASSED
+  PASSED_WITH_WARNINGS
+  FAILED
+  ERROR
+}
+
+model FixValidation {
+  id              String              @id @default(cuid())
+  workspaceId     String
+  workspace       Organization        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  fixProposalId   String
+  fixProposal     FixProposal         @relation(fields: [fixProposalId], references: [id], onDelete: Cascade)
+  status          FixValidationStatus @default(QUEUED)
+  steps           Json
+  errorCode       String?
+  createdByUserId String
+  startedAt       DateTime?
+  finishedAt      DateTime?
+  createdAt       DateTime            @default(now())
+
+  @@index([workspaceId])
+  @@index([fixProposalId])
+  @@map("fix_validation")
+}
+
+model SandboxUsage {
+  id          String        @id @default(cuid())
+  workspaceId String?
+  workspace   Organization? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  day         DateTime      @db.Date
+  runs        Int           @default(0)
+  seconds     Int           @default(0)
+
+  @@unique([workspaceId, day])
+  @@index([workspaceId])
+  @@map("sandbox_usage")
 }
 
 model AiUsage {

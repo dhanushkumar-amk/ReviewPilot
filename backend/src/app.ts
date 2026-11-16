@@ -17,6 +17,7 @@ import { scanRoutes } from "./routes/scans.js";
 import { webhookRoutes } from "./routes/webhooks.js";
 import { findingRoutes } from "./routes/findings.js";
 import { aiRoutes } from "./routes/ai.js";
+import { sandboxRoutes } from "./routes/sandbox.js";
 import { logStartupProviders } from "./ai/providers.js";
 
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9._-]{1,128}$/;
@@ -177,6 +178,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(webhookRoutes);
   await app.register(findingRoutes);
   await app.register(aiRoutes);
+  await app.register(sandboxRoutes);
 
   logStartupProviders(app.log);
 
