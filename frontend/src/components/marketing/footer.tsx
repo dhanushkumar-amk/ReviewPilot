@@ -61,7 +61,7 @@ export function MarketingFooter() {
 
         {/* Copyright */}
         <div className="font-mono text-[11px] text-muted-foreground/80">
-          &copy; {new Date().getFullYear()} ReviewPilot. All rights reserved.
+          &copy; 2026 ReviewPilot. All rights reserved.
         </div>
       </div>
     </footer>

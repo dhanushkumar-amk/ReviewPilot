@@ -5,13 +5,10 @@ import {
   AlertCircleIcon,
   BotIcon,
   CheckCircle2Icon,
-  CheckIcon,
   InfoIcon,
-  ShieldAlertIcon,
   SparklesIcon,
   Wand2Icon,
   XCircleIcon,
-  XIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { MarkdownView } from "@/components/markdown-view";
@@ -28,6 +25,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { AiDisclosureDialog } from "@/components/ai/ai-disclosure-dialog";
+import { FixValidationCard } from "@/components/sandbox/fix-validation-card";
+import type { FixValidation } from "@/src/features/sandbox/use-sandbox";
 import {
   useAiSettings,
   useDiscardProposal,
@@ -373,6 +372,12 @@ export function FindingAiAssist({ finding }: FindingAiAssistProps) {
                   </div>
                 </div>
 
+                {/* Fix Validation Layer */}
+                <FixValidationCard
+                  proposalId={fixProposal.id}
+                  initialValidation={fixProposal.latestValidation as FixValidation | undefined}
+                />
+
                 <div className="flex items-center justify-end gap-2 pt-1 border-t border-border/60">
                   <TooltipProvider>
                     <Tooltip>
@@ -385,7 +390,9 @@ export function FindingAiAssist({ finding }: FindingAiAssistProps) {
                           </span>
                         }
                       />
-                      <TooltipContent>Coming in a later step</TooltipContent>
+                      <TooltipContent>
+                        Pull requests arrive in the next step. Only fixes that pass their checks will be allowed.
+                      </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </div>

@@ -320,6 +320,7 @@ export async function draftFix(options: {
 
       const recheck = await staticRecheck({
         filePath: finding.filePath,
+        originalContent: fileCtx.fullContent,
         patchedContent,
         originalRuleId: finding.ruleId,
       });

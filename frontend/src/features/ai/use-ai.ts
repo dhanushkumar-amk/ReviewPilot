@@ -50,6 +50,7 @@ export const fixProposalSchema = z.object({
       })
       .optional(),
   }),
+  latestValidation: z.any().optional(),
   createdAt: z.string(),
 });
 

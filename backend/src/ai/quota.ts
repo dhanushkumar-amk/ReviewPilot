@@ -14,24 +14,31 @@ export async function checkAndIncrementQuota(workspaceId: string): Promise<void>
 
   await prisma.$transaction(async (tx) => {
     // 1. Global quota check & atomic increment
-    const globalUsage = await tx.aiUsage.upsert({
+    let globalUsage = await tx.aiUsage.findFirst({
       where: {
-        workspaceId_day: {
-          workspaceId: null as any,
-          day,
-        },
-      },
-      create: {
         workspaceId: null,
         day,
-        calls: 1,
-        tokensIn: 0,
-        tokensOut: 0,
-      },
-      update: {
-        calls: { increment: 1 },
       },
     });
+
+    if (!globalUsage) {
+      globalUsage = await tx.aiUsage.create({
+        data: {
+          workspaceId: null,
+          day,
+          calls: 1,
+          tokensIn: 0,
+          tokensOut: 0,
+        },
+      });
+    } else {
+      globalUsage = await tx.aiUsage.update({
+        where: { id: globalUsage.id },
+        data: {
+          calls: { increment: 1 },
+        },
+      });
+    }
 
     if (globalUsage.calls > maxGlobal) {
       throw new AiError("AI_BUSY", "Global daily AI call limit reached");

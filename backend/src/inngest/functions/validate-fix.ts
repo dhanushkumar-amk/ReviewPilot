@@ -10,60 +10,44 @@ export interface FixValidationEventData {
 export const validateFix = inngest.createFunction(
   {
     id: "validate-fix",
-    name: "Validate Fix in E2B Sandbox",
+    name: "Validate Fix",
+    triggers: [{ event: "fix/validation.requested" }],
     concurrency: [
       { key: "event.data.workspaceId", limit: 1 },
       { limit: 2 },
     ],
     retries: 0,
-    onFailure: async ({ event, step }) => {
+    onFailure: async ({ event }) => {
       const originalEvent = event.data.event as
         | { data?: Partial<FixValidationEventData> }
         | undefined;
       const validationId = originalEvent?.data?.validationId;
+      if (!validationId) return;
 
-      if (!validationId) {
-        return;
-      }
-
-      await step.run("mark-failed", async () => {
-        await prisma.fixValidation.updateMany({
-          where: {
-            id: validationId,
-            status: { notIn: ["PASSED", "PASSED_WITH_WARNINGS", "FAILED"] },
-          },
-          data: {
-            status: "ERROR",
-            errorCode: "INTERNAL",
-            finishedAt: new Date(),
-          },
-        });
+      await prisma.fixValidation.updateMany({
+        where: {
+          id: validationId,
+          status: { notIn: ["PASSED", "PASSED_WITH_WARNINGS", "FAILED"] },
+        },
+        data: { status: "ERROR", errorCode: "INTERNAL", finishedAt: new Date() },
       });
     },
   },
-  { event: "fix/validation.requested" },
   async ({ event, step }) => {
     const { validationId } = event.data;
 
-    // Step 1: mark-running (idempotent, skip if already finished or running)
+    // Step 1: mark-running (idempotent)
     const shouldRun = await step.run("mark-running", async () => {
       const existing = await prisma.fixValidation.findUnique({
         where: { id: validationId },
         select: { status: true },
       });
-
-      if (!existing || existing.status !== "QUEUED") {
-        return false;
-      }
+      if (!existing || existing.status !== "QUEUED") return false;
 
       await prisma.fixValidation.update({
         where: { id: validationId },
-        data: {
-          status: "RUNNING",
-          startedAt: new Date(),
-        },
+        data: { status: "RUNNING", startedAt: new Date() },
       });
-
       return true;
     });
 
@@ -71,21 +55,16 @@ export const validateFix = inngest.createFunction(
       return { skipped: true, reason: "Already processed or missing" };
     }
 
-    // Step 2: run-in-sandbox (calls runFixValidation inside ONE step and returns only a small summary)
-    const summary = await step.run("run-in-sandbox", async () => {
+    // Step 2: validate (Layer 1 + Layer 2 in ONE step — temp files and SDK calls must stay together)
+    const summary = await step.run("validate", async () => {
       return await runFixValidation(validationId);
     });
 
     // Step 3: mark-done
     await step.run("mark-done", async () => {
-      return {
-        completed: true,
-        validationId,
-        status: summary.status,
-      };
+      return { completed: true, validationId, status: summary.status };
     });
 
     return summary;
   },
 );
-

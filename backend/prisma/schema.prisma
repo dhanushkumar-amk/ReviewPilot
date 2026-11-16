@@ -409,7 +409,12 @@ model FixValidation {
   fixProposalId   String
   fixProposal     FixProposal         @relation(fields: [fixProposalId], references: [id], onDelete: Cascade)
   status          FixValidationStatus @default(QUEUED)
-  steps           Json
+  riskLevel       String?
+  staticChecks    Json?
+  testsRequested  Boolean             @default(false)
+  testsRun        Boolean             @default(false)
+  testSteps       Json?
+  nodeVersion     String?
   errorCode       String?
   createdByUserId String
   startedAt       DateTime?
@@ -418,6 +423,7 @@ model FixValidation {
 
   @@index([workspaceId])
   @@index([fixProposalId])
+  @@index([fixProposalId, createdAt(sort: Desc)])
   @@map("fix_validation")
 }
 

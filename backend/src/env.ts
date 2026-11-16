@@ -90,6 +90,14 @@ const envSchema = z
     SANDBOX_MAX_PER_WORKSPACE_PER_DAY: z.coerce.number().int().positive().default(5),
     SANDBOX_MAX_GLOBAL_PER_DAY: z.coerce.number().int().positive().default(30),
     SANDBOX_MAX_ARCHIVE_MB: z.coerce.number().int().positive().default(50),
+    // AWS Lambda sandbox
+    AWS_REGION: optionalNonEmptyString,
+    AWS_ACCESS_KEY_ID: optionalNonEmptyString,
+    AWS_SECRET_ACCESS_KEY: optionalNonEmptyString,
+    SANDBOX_PROVIDER: z.enum(["aws-lambda", "none"]).default("none"),
+    SANDBOX_LAMBDA_FUNCTION: optionalNonEmptyString,
+    SANDBOX_BUCKET: optionalNonEmptyString,
+    SANDBOX_URL_TTL_SECONDS: z.coerce.number().int().positive().max(600).default(300),
   })
   .superRefine((data, ctx) => {
     if (data.GROQ_API_KEY && !data.AI_MODEL_GROQ) {
@@ -120,6 +128,25 @@ const envSchema = z
         message: "GITHUB_APP_PRIVATE_KEY_BASE64 must be a base64-encoded valid PEM private key",
       });
     }
+    // AWS Lambda provider requires credentials
+    if (data.SANDBOX_PROVIDER === "aws-lambda") {
+      if (!data.AWS_REGION) {
+        ctx.addIssue({ code: "custom", path: ["AWS_REGION"], message: "AWS_REGION is required when SANDBOX_PROVIDER=aws-lambda" });
+      }
+      if (!data.AWS_ACCESS_KEY_ID) {
+        ctx.addIssue({ code: "custom", path: ["AWS_ACCESS_KEY_ID"], message: "AWS_ACCESS_KEY_ID is required when SANDBOX_PROVIDER=aws-lambda" });
+      }
+      if (!data.AWS_SECRET_ACCESS_KEY) {
+        ctx.addIssue({ code: "custom", path: ["AWS_SECRET_ACCESS_KEY"], message: "AWS_SECRET_ACCESS_KEY is required when SANDBOX_PROVIDER=aws-lambda" });
+      }
+      if (!data.SANDBOX_LAMBDA_FUNCTION) {
+        ctx.addIssue({ code: "custom", path: ["SANDBOX_LAMBDA_FUNCTION"], message: "SANDBOX_LAMBDA_FUNCTION is required when SANDBOX_PROVIDER=aws-lambda" });
+      }
+      if (!data.SANDBOX_BUCKET) {
+        ctx.addIssue({ code: "custom", path: ["SANDBOX_BUCKET"], message: "SANDBOX_BUCKET is required when SANDBOX_PROVIDER=aws-lambda" });
+      }
+    }
+
     if (data.NODE_ENV !== "test") {
       if (!data.DATABASE_URL.includes("-pooler")) {
         ctx.addIssue({
@@ -205,3 +232,18 @@ export const githubAppPrivateKey: string = (() => {
 export const isGoogleAuthEnabled = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
 export const isGithubAuthEnabled = Boolean(env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET);
 export const isSandboxConfigured = Boolean(env.E2B_API_KEY);
+
+/** True when the AWS Lambda sandbox provider is fully configured */
+export const isAwsLambdaSandboxConfigured =
+  env.SANDBOX_PROVIDER === "aws-lambda" &&
+  Boolean(env.AWS_REGION && env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY &&
+    env.SANDBOX_LAMBDA_FUNCTION && env.SANDBOX_BUCKET);
+
+// Log a single startup line about test run availability (no values)
+if (env.NODE_ENV !== "test") {
+  if (isAwsLambdaSandboxConfigured) {
+    console.info("[sandbox] Test runs enabled (AWS Lambda provider)");
+  } else {
+    console.info("[sandbox] Test runs disabled (no provider configured)");
+  }
+}

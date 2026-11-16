@@ -139,6 +139,7 @@ export function buildUnifiedDiff(options: {
 
 export async function staticRecheck(options: {
   filePath: string;
+  originalContent?: string;
   patchedContent: string;
   originalRuleId: string;
 }): Promise<{
@@ -152,6 +153,25 @@ export async function staticRecheck(options: {
   await fs.mkdir(testDir, { recursive: true, mode: 0o700 });
 
   try {
+    const originalRuleFindings: string[] = [];
+    if (options.originalContent) {
+      const origDir = path.join(tmpBase, `reviewpilot-orig-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+      try {
+        await fs.mkdir(origDir, { recursive: true, mode: 0o700 });
+        const origTarget = path.join(origDir, options.filePath);
+        await fs.mkdir(path.dirname(origTarget), { recursive: true });
+        await fs.writeFile(origTarget, options.originalContent, "utf8");
+        const origRes = await runEslintAnalyzer(origDir, origDir);
+        for (const f of origRes.findings) {
+          if (f.severity === "HIGH" || f.severity === "CRITICAL") {
+            originalRuleFindings.push(`${f.ruleId}:${f.startLine}`);
+          }
+        }
+      } finally {
+        await safeRemoveDir(origDir).catch(() => {});
+      }
+    }
+
     const fullTarget = path.join(testDir, options.filePath);
     await fs.mkdir(path.dirname(fullTarget), { recursive: true });
     await fs.writeFile(fullTarget, options.patchedContent, "utf8");
@@ -164,8 +184,14 @@ export async function staticRecheck(options: {
     const originalStillPresent = findings.some((f) => f.ruleId === options.originalRuleId);
     const findingGone = !originalStillPresent;
 
-    // Check if new HIGH or CRITICAL issues appeared
-    const newHighOrCrit = findings.some((f) => f.severity === "HIGH" || f.severity === "CRITICAL");
+    // Check if new HIGH or CRITICAL issues appeared (not present in original)
+    const newHighOrCrit = findings.some((f) => {
+      if (f.severity !== "HIGH" && f.severity !== "CRITICAL") return false;
+      if (options.originalContent) {
+        return !originalRuleFindings.includes(`${f.ruleId}:${f.startLine}`);
+      }
+      return true;
+    });
 
     const passed = findingGone && !newHighOrCrit;
 

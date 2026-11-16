@@ -15,7 +15,8 @@
     "db:studio": "prisma studio",
     "inngest:dev": "npx --ignore-scripts=false inngest-cli@latest dev -u http://localhost:4000/api/inngest",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "validator:smoke": "tsx scripts/validator-smoke.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
@@ -26,6 +27,9 @@
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.92",
+    "@aws-sdk/client-lambda": "^3.1169.0",
+    "@aws-sdk/client-s3": "^3.1169.0",
+    "@aws-sdk/s3-request-presigner": "^3.1169.0",
     "@eslint/js": "^10.0.1",
     "@fastify/cors": "^11.4.1",
     "@fastify/helmet": "^13.2.0",

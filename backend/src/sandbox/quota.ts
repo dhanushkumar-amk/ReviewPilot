@@ -23,23 +23,30 @@ export async function checkAndIncrementSandboxQuota(workspaceId: string): Promis
 
   await prisma.$transaction(async (tx) => {
     // 1. Global quota check & atomic increment
-    const globalUsage = await tx.sandboxUsage.upsert({
+    let globalUsage = await tx.sandboxUsage.findFirst({
       where: {
-        workspaceId_day: {
-          workspaceId: null as any,
-          day,
-        },
-      },
-      create: {
         workspaceId: null,
         day,
-        runs: 1,
-        seconds: 0,
-      },
-      update: {
-        runs: { increment: 1 },
       },
     });
+
+    if (!globalUsage) {
+      globalUsage = await tx.sandboxUsage.create({
+        data: {
+          workspaceId: null,
+          day,
+          runs: 1,
+          seconds: 0,
+        },
+      });
+    } else {
+      globalUsage = await tx.sandboxUsage.update({
+        where: { id: globalUsage.id },
+        data: {
+          runs: { increment: 1 },
+        },
+      });
+    }
 
     if (globalUsage.runs > maxGlobal) {
       throw new SandboxQuotaError("SANDBOX_BUSY", "Global daily sandbox execution limit reached");

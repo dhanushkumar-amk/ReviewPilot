@@ -65,9 +65,12 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAiSettings, useAiUsage, useUpdateAiSettings } from "@/src/features/ai/use-ai";
+import { useSandboxSettings, useSandboxUsage, useUpdateSandboxSettings } from "@/src/features/sandbox/use-sandbox";
 import { AiDisclosureDialog } from "@/components/ai/ai-disclosure-dialog";
+import { SandboxDisclosureDialog } from "@/components/sandbox/sandbox-disclosure-dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useWorkspace } from "@/src/features/me/use-me";
-import { BotIcon } from "lucide-react";
+import { BotIcon, FlaskConicalIcon } from "lucide-react";
 
 const regionItems = [
   { label: "US East (Virginia)", value: "us-east-1" },
@@ -91,7 +94,12 @@ export default function SettingsPage() {
   const aiUsageQuery = useAiUsage();
   const updateAiSettings = useUpdateAiSettings();
 
+  const sandboxSettingsQuery = useSandboxSettings();
+  const sandboxUsageQuery = useSandboxUsage();
+  const updateSandboxSettings = useUpdateSandboxSettings();
+
   const [aiDisclosureOpen, setAiDisclosureOpen] = React.useState(false);
+  const [sandboxDisclosureOpen, setSandboxDisclosureOpen] = React.useState(false);
   const [workspaceName, setWorkspaceName] = React.useState("ReviewPilot Org");
   const [workspaceSlug, setWorkspaceSlug] = React.useState("reviewpilot-org");
   const [region, setRegion] = React.useState("us-east-1");
@@ -262,6 +270,66 @@ export default function SettingsPage() {
                       <span>Today&apos;s AI Usage</span>
                       <span className="font-mono">
                         {aiUsageQuery.data.callsToday} / {aiUsageQuery.data.limit} calls used
+                      </span>
+                    </div>
+                  )}
+                </FieldGroup>
+              </FieldSet>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="border-b">
+              <CardTitle>Test runs</CardTitle>
+              <CardDescription>
+                Validate fix proposals inside an isolated AWS Lambda container running your project&apos;s lint, type check, and test scripts.
+              </CardDescription>
+              <CardAction>
+                <FlaskConicalIcon className="size-4 text-muted-foreground" />
+              </CardAction>
+            </CardHeader>
+            <CardContent className="pt-4 space-y-4">
+              {sandboxSettingsQuery.data && !sandboxSettingsQuery.data.sandboxAvailable && (
+                <Alert variant="default" className="border-border">
+                  <AlertTitle>Test runs unavailable</AlertTitle>
+                  <AlertDescription>
+                    Test execution is not configured on the server. Fix validation will run static checks only.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <FieldSet className="max-w-2xl">
+                <FieldGroup>
+                  <Field orientation="horizontal">
+                    <FieldContent>
+                      <FieldLabel htmlFor="sandbox-toggle">
+                        Enable Sandbox Test Runs
+                      </FieldLabel>
+                      <FieldDescription>
+                        Uploads repository archives to run npm install, lint, type check, and tests. Owner or admin access required.
+                      </FieldDescription>
+                    </FieldContent>
+                    <Switch
+                      id="sandbox-toggle"
+                      checked={sandboxSettingsQuery.data?.sandboxEnabled ?? false}
+                      disabled={!isOwnerOrAdmin || updateSandboxSettings.isPending || !sandboxSettingsQuery.data?.sandboxAvailable}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSandboxDisclosureOpen(true);
+                        } else {
+                          void updateSandboxSettings.mutateAsync(false).then(() => {
+                            toast.success("Disabled test runs in sandbox");
+                          });
+                        }
+                      }}
+                    />
+                  </Field>
+
+                  {sandboxUsageQuery.data && (
+                    <div className="flex items-center justify-between text-xs text-muted-foreground pt-2">
+                      <span>Today&apos;s Test Runs</span>
+                      <span className="font-mono">
+                        {sandboxUsageQuery.data.runsToday} / {sandboxUsageQuery.data.limit} runs used
                       </span>
                     </div>
                   )}
@@ -549,6 +617,12 @@ export default function SettingsPage() {
         open={aiDisclosureOpen}
         onOpenChange={setAiDisclosureOpen}
         onSuccess={() => void aiSettingsQuery.refetch()}
+      />
+
+      <SandboxDisclosureDialog
+        open={sandboxDisclosureOpen}
+        onOpenChange={setSandboxDisclosureOpen}
+        onSuccess={() => void sandboxSettingsQuery.refetch()}
       />
     </div>
   );

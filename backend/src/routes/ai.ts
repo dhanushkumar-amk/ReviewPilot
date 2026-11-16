@@ -137,6 +137,7 @@ export async function aiRoutes(app: FastifyInstance): Promise<void> {
         });
         return result;
       } catch (err: any) {
+        request.log.error({ err, code: err.code, message: err.message, stack: err.stack }, "Explain finding error");
         const code = err.code || "AI_UNAVAILABLE";
         const status =
           code === "FILE_NOT_FOUND"
@@ -202,6 +203,7 @@ export async function aiRoutes(app: FastifyInstance): Promise<void> {
         });
         return result;
       } catch (err: any) {
+        request.log.error({ err, code: err.code, message: err.message, stack: err.stack }, "Draft fix error");
         const code = err.code || "AI_UNAVAILABLE";
         const status =
           code === "FILE_NOT_FOUND"
@@ -275,7 +277,12 @@ export async function aiRoutes(app: FastifyInstance): Promise<void> {
         select: {
           id: true,
           status: true,
-          steps: true,
+          riskLevel: true,
+          staticChecks: true,
+          testsRequested: true,
+          testsRun: true,
+          testSteps: true,
+          nodeVersion: true,
           errorCode: true,
           createdAt: true,
           startedAt: true,

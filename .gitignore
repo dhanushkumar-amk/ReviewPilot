@@ -3,6 +3,9 @@ dist/
 .next/
 backend/src/generated/prisma/
 
+# Archives
+*.zip
+
 # Env files (never commit real secrets)
 .env
 .env.*

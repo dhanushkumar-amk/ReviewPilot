@@ -1,0 +1,9 @@
+{
+  "name": "reviewpilot-validator",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test src/tests/validator.test.mjs"
+  }
+}
