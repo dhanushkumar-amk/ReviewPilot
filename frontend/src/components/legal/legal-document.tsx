@@ -22,7 +22,7 @@ export interface LegalSection {
 }
 
 export interface LegalDocumentProps {
-  activeSlug: "terms" | "privacy" | "security";
+  activeSlug: "terms" | "privacy" | "security" | "refund-policy";
   badge: string;
   title: string;
   description: string;
@@ -36,6 +36,7 @@ const legalPages = [
   { slug: "terms", label: "Terms of Service", href: "/terms" },
   { slug: "privacy", label: "Privacy Policy", href: "/privacy" },
   { slug: "security", label: "Security", href: "/security" },
+  { slug: "refund-policy", label: "Refund Policy", href: "/refund-policy" },
 ] as const;
 
 export function buildLegalMetadata(title: string, description: string): Metadata {

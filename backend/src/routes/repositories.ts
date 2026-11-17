@@ -505,6 +505,8 @@ export async function repositoryRoutes(app: FastifyInstance): Promise<void> {
         "Enqueued manual scan",
       );
 
+      invalidateEntitlementsCache(repo.workspaceId);
+
       return reply.status(202).send({ ok: true });
     },
   );

@@ -6,6 +6,10 @@ import { env } from "../env.js";
 import { Prisma } from "../generated/prisma/client.js";
 import { inngest } from "../inngest/client.js";
 import { InMemoryRateLimiter } from "../lib/rate-limit.js";
+import {
+  isRepositoryAllowedByPlan,
+  assertWithinLimit,
+} from "../billing/entitlements.js";
 
 const WEBHOOK_BODY_LIMIT = 25 * 1024 * 1024;
 const webhookRateLimiter = new InMemoryRateLimiter(300, 60_000);
@@ -281,6 +285,17 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
         }
         if (branch !== repo.defaultBranch) {
           return ignore("non_default_branch");
+        }
+
+        const repoAllowed = await isRepositoryAllowedByPlan(repo.workspaceId, repo.id);
+        if (!repoAllowed.allowed) {
+          return ignore("plan_limit_repos");
+        }
+
+        try {
+          await assertWithinLimit(repo.workspaceId, "scans");
+        } catch {
+          return ignore("plan_limit_scans");
         }
 
         const now = new Date();

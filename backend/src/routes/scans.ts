@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "../db.js";
 import type { Prisma } from "../generated/prisma/client.js";
 import { requireWorkspace, workspaceWhere } from "../tenancy/workspace.js";
+import { getHistoryCutoffDate } from "../billing/entitlements.js";
 
 const scanStatusSchema = z.enum([
   "QUEUED",
@@ -78,10 +79,12 @@ export async function scanRoutes(app: FastifyInstance): Promise<void> {
       }
 
       const { cursor, limit, repositoryId, status } = parsedQuery.data;
+      const cutoff = await getHistoryCutoffDate(request.workspace!.id);
       const where: Prisma.ScanWhereInput = {
         ...workspaceWhere(request),
         ...(repositoryId ? { repositoryId } : {}),
         ...(status ? { status } : {}),
+        ...(cutoff ? { createdAt: { gte: cutoff } } : {}),
       };
 
       if (cursor) {

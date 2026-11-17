@@ -28,6 +28,7 @@ import {
   useInitialAuthUser,
 } from "@/components/auth/auth-user-provider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,6 +57,7 @@ import {
   formatWorkspaceRole,
   useWorkspace,
 } from "@/src/features/me/use-me";
+import { useBilling } from "@/src/features/billing/use-billing";
 import { authClient } from "@/src/lib/auth-client";
 import { CommandPalette } from "./command-palette";
 
@@ -152,6 +154,8 @@ export function AppSidebar() {
     isSwitching,
     switchWorkspace,
   } = useWorkspace();
+  const { data: billing } = useBilling();
+  const planTier = billing?.entitlements?.plan ?? "FREE";
 
   const currentUser = session?.user ?? meUser ?? initialUser;
   const displayName = currentUser?.name ?? "User";
@@ -206,9 +210,17 @@ export function AppSidebar() {
                     {workspaceMonogram(activeWorkspaceName)}
                   </div>
                   <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-semibold">
-                      {activeWorkspaceName}
-                    </span>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="truncate font-semibold">
+                        {activeWorkspaceName}
+                      </span>
+                      <Badge
+                        variant={planTier === "PREMIUM" ? "default" : "secondary"}
+                        className="h-4 px-1 text-[9px] uppercase font-mono tracking-wider shrink-0"
+                      >
+                        {planTier}
+                      </Badge>
+                    </div>
                     <span className="truncate text-xs text-muted-foreground">
                       {isSwitching ? "Switching..." : activeWorkspaceRoleLabel}
                     </span>

@@ -70,6 +70,7 @@ import {
   useTriggerManualScan,
   type RepoStatus,
 } from "@/src/features/repositories/use-repositories";
+import { useBilling } from "@/src/features/billing/use-billing";
 import type { ScanStatus } from "@/src/features/scans/use-scans";
 import { cn } from "@/lib/utils";
 
@@ -190,6 +191,12 @@ export default function RepositoriesPage() {
   }, [debouncedSearch, statusFilter, activeWorkspace?.id]);
 
   const installationsQuery = useGithubInstallations({ enabled: !isDemoMode });
+  const { data: billing } = useBilling();
+  const isRepoLimitReached = Boolean(
+    billing &&
+      billing.entitlements.usage.connectedRepositories >=
+        billing.entitlements.limits.maxRepositories
+  );
   const syncMutation = useSyncGithubInstallation();
   const connectMutation = useConnectRepository();
   const disconnectMutation = useDisconnectRepository();
@@ -659,16 +666,26 @@ export default function RepositoriesPage() {
                               </span>
                             </TableCell>
                             <TableCell>
-                              <span className="inline-flex items-center gap-2 text-sm text-foreground">
-                                <span
-                                  className={cn(
-                                    "size-2 shrink-0 rounded-full",
-                                    statusMeta.dotClassName
-                                  )}
-                                  aria-hidden="true"
-                                />
-                                {statusMeta.label}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="inline-flex items-center gap-2 text-sm text-foreground">
+                                  <span
+                                    className={cn(
+                                      "size-2 shrink-0 rounded-full",
+                                      statusMeta.dotClassName
+                                    )}
+                                    aria-hidden="true"
+                                  />
+                                  {statusMeta.label}
+                                </span>
+                                {repo.pausedByPlan ? (
+                                  <Badge
+                                    variant="outline"
+                                    className="border-warning text-warning-foreground text-[10px] h-4 px-1"
+                                  >
+                                    Paused by plan
+                                  </Badge>
+                                ) : null}
+                              </div>
                             </TableCell>
                             <TableCell className="text-sm text-muted-foreground">
                               {formatRelativeOrDash(repo.lastPushAt)}
@@ -718,20 +735,43 @@ export default function RepositoriesPage() {
                             <TableCell className="text-right">
                               <div className="inline-flex items-center justify-end gap-2">
                                 {repo.status === "CONNECTED" ? (
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    disabled={Boolean(scanningRepoId)}
-                                    onClick={() => void handleScanNow(repo.id)}
-                                  >
-                                    {scanningRepoId === repo.id ? (
-                                      <Spinner data-icon="inline-start" />
-                                    ) : (
-                                      <PlayIcon data-icon="inline-start" />
-                                    )}
-                                    Scan now
-                                  </Button>
+                                  repo.pausedByPlan ? (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <span>
+                                            <Button
+                                              type="button"
+                                              variant="outline"
+                                              size="sm"
+                                              disabled
+                                            >
+                                              <PlayIcon data-icon="inline-start" />
+                                              Scan now
+                                            </Button>
+                                          </span>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          Repository is paused by plan limit. Upgrade to Premium to scan this repository.
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  ) : (
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      disabled={Boolean(scanningRepoId)}
+                                      onClick={() => void handleScanNow(repo.id)}
+                                    >
+                                      {scanningRepoId === repo.id ? (
+                                        <Spinner data-icon="inline-start" />
+                                      ) : (
+                                        <PlayIcon data-icon="inline-start" />
+                                      )}
+                                      Scan now
+                                    </Button>
+                                  )
                                 ) : null}
                                 {repo.status === "REMOVED" ? (
                                   <span className="text-xs text-muted-foreground">
@@ -766,23 +806,45 @@ export default function RepositoriesPage() {
                                     </Tooltip>
                                   </TooltipProvider>
                                 ) : canConnect ? (
-                                  <Button
-                                    type="button"
-                                    variant="default"
-                                    size="sm"
-                                    disabled={Boolean(pendingRepoId)}
-                                    onClick={() =>
-                                      void handleConnectRepo(
-                                        repo.id,
-                                        repo.fullName
-                                      )
-                                    }
-                                  >
-                                    {isRowBusy ? (
-                                      <Spinner data-icon="inline-start" />
-                                    ) : null}
-                                    Connect
-                                  </Button>
+                                  isRepoLimitReached ? (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <span>
+                                            <Button
+                                              type="button"
+                                              variant="default"
+                                              size="sm"
+                                              disabled
+                                            >
+                                              Connect
+                                            </Button>
+                                          </span>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          Repository limit reached for your plan. Upgrade to Premium to connect more repositories.
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  ) : (
+                                    <Button
+                                      type="button"
+                                      variant="default"
+                                      size="sm"
+                                      disabled={Boolean(pendingRepoId)}
+                                      onClick={() =>
+                                        void handleConnectRepo(
+                                          repo.id,
+                                          repo.fullName
+                                        )
+                                      }
+                                    >
+                                      {isRowBusy ? (
+                                        <Spinner data-icon="inline-start" />
+                                      ) : null}
+                                      Connect
+                                    </Button>
+                                  )
                                 ) : canDisconnect ? (
                                   <Button
                                     type="button"

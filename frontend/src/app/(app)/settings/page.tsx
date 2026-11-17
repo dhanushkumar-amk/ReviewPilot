@@ -1,11 +1,13 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import {
   BellIcon,
   CheckIcon,
   CopyIcon,
+  CreditCardIcon,
   KeyRoundIcon,
   RefreshCwIcon,
   SaveIcon,
@@ -145,6 +147,14 @@ export default function SettingsPage() {
       <PageHeader
         title="Settings"
         description="Configure workspace defaults, pull request merge policies, alert channels, and API credentials."
+        actions={
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/billing">
+              <CreditCardIcon data-icon="inline-start" />
+              Billing & Subscription
+            </Link>
+          </Button>
+        }
       />
 
       <Tabs defaultValue="general" className="gap-4">

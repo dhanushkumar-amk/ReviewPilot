@@ -10,6 +10,11 @@ import {
   requireWorkspaceAdmin,
   workspaceWhere,
 } from "../tenancy/workspace.js";
+import {
+  assertWithinLimit,
+  invalidateEntitlementsCache,
+  PlanLimitError,
+} from "../billing/entitlements.js";
 
 const explainRateLimiter = new InMemoryRateLimiter(10, 60_000);
 const fixRateLimiter = new InMemoryRateLimiter(5, 60_000);
@@ -196,11 +201,33 @@ export async function aiRoutes(app: FastifyInstance): Promise<void> {
       const { id } = request.params as { id: string };
 
       try {
+        await assertWithinLimit(workspaceId, "aiFixDrafts");
+      } catch (err) {
+        if (err instanceof PlanLimitError) {
+          return reply.status(403).send({
+            error: {
+              code: "PLAN_LIMIT_REACHED",
+              message: err.message,
+              details: {
+                kind: err.kind,
+                limit: err.limit,
+                used: err.used,
+                plan: err.plan,
+              },
+              requestId: request.id,
+            },
+          });
+        }
+        throw err;
+      }
+
+      try {
         const result = await draftFix({
           findingId: id,
           workspaceId,
           userId,
         });
+        invalidateEntitlementsCache(workspaceId);
         return result;
       } catch (err: any) {
         request.log.error({ err, code: err.code, message: err.message, stack: err.stack }, "Draft fix error");

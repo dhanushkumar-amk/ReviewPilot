@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "../db.js";
 import type { Prisma } from "../generated/prisma/client.js";
 import { requireWorkspace, workspaceWhere } from "../tenancy/workspace.js";
+import { getHistoryCutoffDate } from "../billing/entitlements.js";
 
 const findingSeveritySchema = z.enum(["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"]);
 const findingStatusSchema = z.enum(["OPEN", "ACCEPTED", "REJECTED", "FIXED"]);
@@ -57,12 +58,15 @@ export async function findingRoutes(app: FastifyInstance): Promise<void> {
       sortDir,
     } = parseRes.data;
 
+    const cutoff = await getHistoryCutoffDate(request.workspace!.id);
+
     const where: Prisma.FindingWhereInput = {
       ...workspaceWhere(request),
       ...(repositoryId ? { repositoryId } : {}),
       ...(severity && severity.length > 0 ? { severity: { in: severity } } : {}),
       ...(status && status.length > 0 ? { status: { in: status } } : {}),
       ...(tool && tool.length > 0 ? { tool: { in: tool } } : {}),
+      ...(cutoff ? { lastSeenAt: { gte: cutoff } } : {}),
       ...(search
         ? {
             OR: [

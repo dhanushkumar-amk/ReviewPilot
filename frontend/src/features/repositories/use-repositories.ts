@@ -42,6 +42,7 @@ export const repositoryItemSchema = z.object({
   status: repoStatusSchema,
   lastPushAt: z.string().nullable().optional(),
   lastScan: lastScanSummarySchema.nullable().optional(),
+  pausedByPlan: z.boolean().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
