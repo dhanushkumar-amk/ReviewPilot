@@ -11,7 +11,7 @@ export class SecurityGuardError extends Error {
     public readonly code: string,
     message: string
   ) {
-    super(message);
+    super(code ? `[${code}] ${message}` : message);
     this.name = "SecurityGuardError";
   }
 }
@@ -111,7 +111,7 @@ export function sanitizeText(text: string, maxLen = 600): string {
 
   // 7. Neutralize closing keywords followed by issue references:
   // e.g. "fixes #123", "closes #456", "resolves #789"
-  cleaned = cleaned.replace(/\b(close[sd]?|fix(e[sd])?|resolve[sd]?)\s+(#\d+)/gi, "$1 #\u200B$2");
+  cleaned = cleaned.replace(/\b(close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#(\d+)/gi, "$1 #\u200B$2");
 
   // 8. Neutralize any remaining issue references: #123 -> #\u200B123
   cleaned = cleaned.replace(/#(\d+)/g, "#\u200B$1");

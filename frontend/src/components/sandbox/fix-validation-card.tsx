@@ -219,7 +219,7 @@ export function FixValidationCard({
 
       {/* Trigger Controls */}
       <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-border/50">
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-2">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger
@@ -265,16 +265,16 @@ export function FixValidationCard({
           size="sm"
           onClick={handleRunValidation}
           disabled={isRunning}
-          className="h-7 text-xs font-medium gap-1.5"
+          className="h-7 text-xs font-medium"
         >
           {isRunning ? (
             <>
-              <Spinner className="size-3" />
+              <Spinner data-icon="inline-start" />
               Validating...
             </>
           ) : (
             <>
-              <PlayIcon className="size-3" />
+              <PlayIcon data-icon="inline-start" />
               Check this fix
             </>
           )}
@@ -312,7 +312,7 @@ export function FixValidationCard({
               return (
                 <div
                   key={idx}
-                  className="flex items-start justify-between gap-2 p-1.5 rounded-sm bg-muted/30"
+                  className="flex items-start justify-between gap-2 p-2 rounded-md bg-muted/30 border border-border/40"
                 >
                   <div className="flex items-center gap-2">
                     {renderCheckIcon(check.status)}
@@ -321,9 +321,18 @@ export function FixValidationCard({
                       — {check.note}
                     </span>
                   </div>
-                  <span className="font-semibold text-[11px] uppercase tracking-wider">
+                  <Badge
+                    variant={
+                      check.status === "PASSED"
+                        ? "success"
+                        : check.status === "FAILED"
+                          ? "destructive"
+                          : "secondary"
+                    }
+                    className="text-[10px] font-semibold h-4.5 px-1.5 uppercase"
+                  >
                     {check.status}
-                  </span>
+                  </Badge>
                 </div>
               );
             })}
@@ -358,7 +367,7 @@ export function FixValidationCard({
               return (
                 <div
                   key={idx}
-                  className="rounded-md border border-border/60 bg-muted/20 p-2 space-y-1.5"
+                  className="rounded-md border border-border/60 bg-muted/20 p-2 flex flex-col gap-1.5"
                 >
                   <div className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2">
@@ -370,9 +379,18 @@ export function FixValidationCard({
                         </span>
                       )}
                     </div>
-                    <span className="font-semibold text-[11px] uppercase tracking-wider">
+                    <Badge
+                      variant={
+                        step.status === "PASSED"
+                          ? "success"
+                          : step.status === "FAILED"
+                            ? "destructive"
+                            : "secondary"
+                      }
+                      className="text-[10px] font-semibold h-4.5 px-1.5 uppercase"
+                    >
                       {step.status}
-                    </span>
+                    </Badge>
                   </div>
 
                   {step.note && (

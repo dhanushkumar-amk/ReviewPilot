@@ -222,7 +222,7 @@ export function FindingAiAssist({ finding }: FindingAiAssistProps) {
               {explainMutation.isPending ? (
                 <Spinner data-icon="inline-start" />
               ) : (
-                <BotIcon data-icon="inline-start" className="size-3.5" />
+                <BotIcon data-icon="inline-start" />
               )}
               {explanation ? "Re-explain" : "Explain finding"}
             </Button>
@@ -239,7 +239,7 @@ export function FindingAiAssist({ finding }: FindingAiAssistProps) {
                 {draftFixMutation.isPending ? (
                   <Spinner data-icon="inline-start" />
                 ) : (
-                  <Wand2Icon data-icon="inline-start" className="size-3.5 text-primary" />
+                  <Wand2Icon data-icon="inline-start" className="text-primary" />
                 )}
                 {fixProposal ? "Re-draft fix" : "Draft a fix"}
               </Button>
@@ -518,12 +518,12 @@ export function FindingAiAssist({ finding }: FindingAiAssistProps) {
                                       void handleCreatePr(false);
                                     }
                                   }}
-                                  className="h-8 text-xs font-medium gap-1.5"
+                                  className="h-8 text-xs font-medium"
                                 >
                                   {createPrMutation.isPending ? (
-                                    <Spinner className="size-3.5" />
+                                    <Spinner data-icon="inline-start" />
                                   ) : (
-                                    <GitPullRequestIcon className="size-3.5" />
+                                    <GitPullRequestIcon data-icon="inline-start" />
                                   )}
                                   <span>Create pull request</span>
                                 </Button>
@@ -550,7 +550,7 @@ export function FindingAiAssist({ finding }: FindingAiAssistProps) {
       <Dialog open={riskDialogOpen} onOpenChange={setRiskDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-base flex items-center gap-2 text-amber-600 dark:text-amber-400">
+            <DialogTitle className="text-base flex items-center gap-2 text-destructive">
               <ShieldAlertIcon className="size-5" />
               <span>Acknowledge High-Risk Fix</span>
             </DialogTitle>
@@ -560,9 +560,9 @@ export function FindingAiAssist({ finding }: FindingAiAssistProps) {
           </DialogHeader>
 
           <div className="flex flex-col gap-3 py-2 text-xs">
-            <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 text-xs">
+            <div className="p-3 rounded-lg border border-destructive/30 bg-destructive/10 text-xs">
               <span className="font-semibold block mb-1">Risk Factors Detected:</span>
-              <ul className="list-disc list-inside text-muted-foreground space-y-0.5">
+              <ul className="list-disc list-inside text-muted-foreground flex flex-col gap-1">
                 <li>Code boundaries or signature modifications</li>
                 <li>Changes exceeding moderate line modification thresholds</li>
               </ul>
@@ -593,9 +593,9 @@ export function FindingAiAssist({ finding }: FindingAiAssistProps) {
               size="sm"
               disabled={!riskAcknowledged || createPrMutation.isPending}
               onClick={() => void handleCreatePr(true)}
-              className="gap-1.5 text-xs font-medium"
+              className="text-xs font-medium"
             >
-              {createPrMutation.isPending ? <Spinner className="size-3.5" /> : null}
+              {createPrMutation.isPending ? <Spinner data-icon="inline-start" /> : null}
               <span>Confirm & Create PR</span>
             </Button>
           </DialogFooter>

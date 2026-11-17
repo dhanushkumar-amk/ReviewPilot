@@ -88,11 +88,14 @@ export interface PullRequestUsage {
   remaining: number;
 }
 
-export function usePullRequests(params?: {
-  repositoryId?: string;
-  status?: string;
-  limit?: number;
-}) {
+export function usePullRequests(
+  params?: {
+    repositoryId?: string;
+    status?: string;
+    limit?: number;
+  },
+  options?: { enabled?: boolean }
+) {
   return useQuery({
     queryKey: ["pull-requests", params],
     queryFn: async () => {
@@ -105,6 +108,7 @@ export function usePullRequests(params?: {
       const url = qs ? `/api/pull-requests?${qs}` : "/api/pull-requests";
       return apiFetch<{ pullRequests: PullRequestItem[]; nextCursor: string | null }>(url);
     },
+    enabled: options?.enabled,
   });
 }
 

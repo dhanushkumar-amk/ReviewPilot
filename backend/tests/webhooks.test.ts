@@ -2,9 +2,11 @@ import crypto from "node:crypto";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { FastifyInstance } from "fastify";
 
-const mockInngestSend = vi.fn();
-const mockGetBranch = vi.fn();
-const mockGetInstallationOctokit = vi.fn();
+const { mockInngestSend, mockGetBranch, mockGetInstallationOctokit } = vi.hoisted(() => ({
+  mockInngestSend: vi.fn(),
+  mockGetBranch: vi.fn(),
+  mockGetInstallationOctokit: vi.fn(),
+}));
 
 vi.mock("../src/inngest/client.js", async () => {
   const actual = await vi.importActual<typeof import("../src/inngest/client.js")>(
