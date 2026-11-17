@@ -98,6 +98,14 @@ const envSchema = z
     SANDBOX_LAMBDA_FUNCTION: optionalNonEmptyString,
     SANDBOX_BUCKET: optionalNonEmptyString,
     SANDBOX_URL_TTL_SECONDS: z.coerce.number().int().positive().max(600).default(300),
+    // Billing with Razorpay
+    BILLING_ENABLED: z.preprocess((val) => val === "true" || val === true, z.boolean()).default(false),
+    BILLING_FORCE_PLAN: z.enum(["free", "premium"]).optional(),
+    RAZORPAY_KEY_ID: optionalNonEmptyString,
+    RAZORPAY_KEY_SECRET: optionalNonEmptyString,
+    RAZORPAY_WEBHOOK_SECRET: optionalNonEmptyString,
+    RAZORPAY_PLAN_PREMIUM_MONTHLY: optionalNonEmptyString,
+    RAZORPAY_PLAN_PREMIUM_YEARLY: optionalNonEmptyString,
   })
   .superRefine((data, ctx) => {
     if (data.GROQ_API_KEY && !data.AI_MODEL_GROQ) {
@@ -145,6 +153,41 @@ const envSchema = z
       if (!data.SANDBOX_BUCKET) {
         ctx.addIssue({ code: "custom", path: ["SANDBOX_BUCKET"], message: "SANDBOX_BUCKET is required when SANDBOX_PROVIDER=aws-lambda" });
       }
+    }
+
+    if (data.BILLING_ENABLED) {
+      if (!data.RAZORPAY_KEY_ID) {
+        ctx.addIssue({ code: "custom", path: ["RAZORPAY_KEY_ID"], message: "RAZORPAY_KEY_ID is required when BILLING_ENABLED=true" });
+      }
+      if (!data.RAZORPAY_KEY_SECRET) {
+        ctx.addIssue({ code: "custom", path: ["RAZORPAY_KEY_SECRET"], message: "RAZORPAY_KEY_SECRET is required when BILLING_ENABLED=true" });
+      }
+      if (!data.RAZORPAY_WEBHOOK_SECRET || data.RAZORPAY_WEBHOOK_SECRET.length < 32) {
+        ctx.addIssue({ code: "custom", path: ["RAZORPAY_WEBHOOK_SECRET"], message: "RAZORPAY_WEBHOOK_SECRET must be at least 32 characters when BILLING_ENABLED=true" });
+      }
+      if (!data.RAZORPAY_PLAN_PREMIUM_MONTHLY) {
+        ctx.addIssue({ code: "custom", path: ["RAZORPAY_PLAN_PREMIUM_MONTHLY"], message: "RAZORPAY_PLAN_PREMIUM_MONTHLY is required when BILLING_ENABLED=true" });
+      }
+      if (!data.RAZORPAY_PLAN_PREMIUM_YEARLY) {
+        ctx.addIssue({ code: "custom", path: ["RAZORPAY_PLAN_PREMIUM_YEARLY"], message: "RAZORPAY_PLAN_PREMIUM_YEARLY is required when BILLING_ENABLED=true" });
+      }
+
+      // Safety rail: in non-production environments RAZORPAY_KEY_ID must start with "rzp_test_" (refuse to start otherwise)
+      if (data.NODE_ENV !== "production" && data.RAZORPAY_KEY_ID && !data.RAZORPAY_KEY_ID.startsWith("rzp_test_")) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["RAZORPAY_KEY_ID"],
+          message: "RAZORPAY_KEY_ID must start with rzp_test_ in non-production environments",
+        });
+      }
+    }
+
+    if (data.NODE_ENV === "production" && data.BILLING_FORCE_PLAN) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["BILLING_FORCE_PLAN"],
+        message: "BILLING_FORCE_PLAN is only allowed in development and test environments",
+      });
     }
 
     if (data.NODE_ENV !== "test") {
@@ -238,6 +281,7 @@ export const isAwsLambdaSandboxConfigured =
   env.SANDBOX_PROVIDER === "aws-lambda" &&
   Boolean(env.AWS_REGION && env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY &&
     env.SANDBOX_LAMBDA_FUNCTION && env.SANDBOX_BUCKET);
+export const isBillingEnabled = Boolean(env.BILLING_ENABLED);
 
 // Log a single startup line about test run availability (no values)
 if (env.NODE_ENV !== "test") {

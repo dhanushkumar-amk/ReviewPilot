@@ -11,6 +11,13 @@ import {
   requireWorkspaceAdmin,
   workspaceWhere,
 } from "../tenancy/workspace.js";
+import {
+  assertWithinLimit,
+  isRepositoryAllowedByPlan,
+  getEntitlements,
+  invalidateEntitlementsCache,
+  PlanLimitError,
+} from "../billing/entitlements.js";
 
 const repoStatusSchema = z.enum([
   "AVAILABLE",
@@ -133,7 +140,7 @@ export async function repositoryRoutes(app: FastifyInstance): Promise<void> {
         }
       }
 
-      const [total, rows] = await Promise.all([
+      const [total, rows, entitlements, connectedRepos] = await Promise.all([
         prisma.repository.count({ where }),
         prisma.repository.findMany({
           where,
@@ -142,11 +149,24 @@ export async function repositoryRoutes(app: FastifyInstance): Promise<void> {
           ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
           select: repositoryWithLastScanSelect,
         }),
+        getEntitlements(request.workspace!.id),
+        prisma.repository.findMany({
+          where: { ...scope, status: "CONNECTED" },
+          orderBy: { createdAt: "asc" },
+          select: { id: true },
+        }),
       ]);
+
+      const allowedRepoIds = new Set(
+        connectedRepos.slice(0, entitlements.limits.maxRepositories).map((r) => r.id)
+      );
 
       const hasMore = rows.length > limit;
       const sliced = hasMore ? rows.slice(0, limit) : rows;
-      const items = sliced.map(serializeRepositoryWithLastScan);
+      const items = sliced.map((row) => ({
+        ...serializeRepositoryWithLastScan(row),
+        pausedByPlan: row.status === "CONNECTED" && !allowedRepoIds.has(row.id),
+      }));
       const nextCursor = hasMore ? items[items.length - 1]?.id ?? null : null;
 
       return {
@@ -191,7 +211,13 @@ export async function repositoryRoutes(app: FastifyInstance): Promise<void> {
         });
       }
 
-      return { repository: serializeRepositoryWithLastScan(repositoryRow) };
+      const check = await isRepositoryAllowedByPlan(request.workspace!.id, repositoryRow.id);
+      return {
+        repository: {
+          ...serializeRepositoryWithLastScan(repositoryRow),
+          pausedByPlan: repositoryRow.status === "CONNECTED" && !check.allowed,
+        },
+      };
     }
   );
 
@@ -232,7 +258,27 @@ export async function repositoryRoutes(app: FastifyInstance): Promise<void> {
         });
       }
 
-      // TODO(billing): Check workspace plan repository limit before connecting.
+      try {
+        await assertWithinLimit(scope.workspaceId, "repositories");
+      } catch (err) {
+        if (err instanceof PlanLimitError) {
+          return reply.status(403).send({
+            error: {
+              code: "PLAN_LIMIT_REACHED",
+              message: err.message,
+              details: {
+                kind: err.kind,
+                limit: err.limit,
+                used: err.used,
+                plan: err.plan,
+              },
+              requestId: request.id,
+            },
+          });
+        }
+        throw err;
+      }
+
       if (existing.status !== "AVAILABLE" && existing.status !== "DISCONNECTED") {
         return reply.status(409).send({
           error: {
@@ -248,6 +294,8 @@ export async function repositoryRoutes(app: FastifyInstance): Promise<void> {
         data: { status: "CONNECTED" },
         select: repositorySelect,
       });
+
+      invalidateEntitlementsCache(scope.workspaceId);
 
       return { repository };
     }
@@ -306,6 +354,8 @@ export async function repositoryRoutes(app: FastifyInstance): Promise<void> {
         select: repositorySelect,
       });
 
+      invalidateEntitlementsCache(scope.workspaceId);
+
       return { repository };
     }
   );
@@ -363,6 +413,38 @@ export async function repositoryRoutes(app: FastifyInstance): Promise<void> {
             requestId: request.id,
           },
         });
+      }
+
+      const repoAllowed = await isRepositoryAllowedByPlan(repo.workspaceId, repo.id);
+      if (!repoAllowed.allowed) {
+        return reply.status(403).send({
+          error: {
+            code: "PLAN_LIMIT_REACHED",
+            message: `Repository is paused by plan (${repoAllowed.plan} plan allows up to ${repoAllowed.limit} connected repository). Upgrade to Premium to scan this repository.`,
+            requestId: request.id,
+          },
+        });
+      }
+
+      try {
+        await assertWithinLimit(repo.workspaceId, "scans");
+      } catch (err) {
+        if (err instanceof PlanLimitError) {
+          return reply.status(403).send({
+            error: {
+              code: "PLAN_LIMIT_REACHED",
+              message: err.message,
+              details: {
+                kind: err.kind,
+                limit: err.limit,
+                used: err.used,
+                plan: err.plan,
+              },
+              requestId: request.id,
+            },
+          });
+        }
+        throw err;
       }
 
       if (repo.installation.suspendedAt !== null) {

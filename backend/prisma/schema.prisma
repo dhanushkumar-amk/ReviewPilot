@@ -98,6 +98,8 @@ model Organization {
   aiEnabled           Boolean              @default(false)
   aiEnabledBy         String?
   aiEnabledAt         DateTime?
+  billingSubscription BillingSubscription?
+  billingPayments     BillingPayment[]
   sandboxEnabled      Boolean              @default(false)
   sandboxEnabledBy    String?
   sandboxEnabledAt    DateTime?
@@ -517,5 +519,54 @@ model AuditLog {
   @@index([workspaceId])
   @@index([workspaceId, createdAt(sort: Desc)])
   @@map("audit_log")
+}
+
+model BillingSubscription {
+  id                     String       @id @default(cuid())
+  workspaceId            String       @unique
+  workspace              Organization @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  razorpaySubscriptionId String       @unique
+  razorpayPlanId         String
+  planKey                String
+  status                 String
+  currentPeriodStart     DateTime?
+  currentPeriodEnd       DateTime?
+  cancelAtPeriodEnd      Boolean      @default(false)
+  graceUntil             DateTime?
+  createdByUserId        String
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+  lastSyncedAt           DateTime?
+
+  @@index([workspaceId])
+  @@map("billing_subscription")
+}
+
+model BillingPayment {
+  id                     String       @id @default(cuid())
+  workspaceId            String
+  workspace              Organization @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  razorpayPaymentId      String       @unique
+  razorpaySubscriptionId String?
+  amount                 Int
+  currency               String
+  status                 String
+  paidAt                 DateTime?
+  createdAt              DateTime     @default(now())
+
+  @@index([workspaceId])
+  @@index([workspaceId, createdAt(sort: Desc)])
+  @@map("billing_payment")
+}
+
+model BillingEvent {
+  id          String    @id @default(cuid())
+  eventId     String    @unique
+  event       String
+  status      String
+  createdAt   DateTime  @default(now())
+  processedAt DateTime?
+
+  @@map("billing_event")
 }
 

@@ -19,6 +19,7 @@ import { findingRoutes } from "./routes/findings.js";
 import { aiRoutes } from "./routes/ai.js";
 import { sandboxRoutes } from "./routes/sandbox.js";
 import { pullRequestRoutes } from "./routes/pull-requests.js";
+import { billingRoutes, razorpayWebhookRoutes } from "./routes/billing.js";
 import { logStartupProviders } from "./ai/providers.js";
 
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9._-]{1,128}$/;
@@ -108,6 +109,11 @@ export async function buildApp(): Promise<FastifyInstance> {
         "*.installationToken",
         "*.GITHUB_APP_PRIVATE_KEY_BASE64",
         "*.GITHUB_APP_CLIENT_SECRET",
+        "*.razorpay_signature",
+        "*.key_secret",
+        "*.webhook_secret",
+        "*.RAZORPAY_KEY_SECRET",
+        "*.RAZORPAY_WEBHOOK_SECRET",
       ],
       serializers: {
         req(request) {
@@ -181,6 +187,8 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(aiRoutes);
   await app.register(sandboxRoutes);
   await app.register(pullRequestRoutes);
+  await app.register(billingRoutes);
+  await app.register(razorpayWebhookRoutes);
 
   logStartupProviders(app.log);
 
