@@ -23,7 +23,7 @@ function computeLarge() {
 
 function checkZero(val) {
   // no-compare-neg-zero: -0 compares equal to +0 with strict equality
-  if (val === -0) {
+if (Object.is(val, -0)) {
     return true;
   }
   return false;
