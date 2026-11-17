@@ -66,11 +66,12 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAiSettings, useAiUsage, useUpdateAiSettings } from "@/src/features/ai/use-ai";
 import { useSandboxSettings, useSandboxUsage, useUpdateSandboxSettings } from "@/src/features/sandbox/use-sandbox";
+import { usePullRequestUsage } from "@/src/features/pull-requests/use-pull-requests";
 import { AiDisclosureDialog } from "@/components/ai/ai-disclosure-dialog";
 import { SandboxDisclosureDialog } from "@/components/sandbox/sandbox-disclosure-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useWorkspace } from "@/src/features/me/use-me";
-import { BotIcon, FlaskConicalIcon } from "lucide-react";
+import { BotIcon, FlaskConicalIcon, GitPullRequestIcon } from "lucide-react";
 
 const regionItems = [
   { label: "US East (Virginia)", value: "us-east-1" },
@@ -97,6 +98,7 @@ export default function SettingsPage() {
   const sandboxSettingsQuery = useSandboxSettings();
   const sandboxUsageQuery = useSandboxUsage();
   const updateSandboxSettings = useUpdateSandboxSettings();
+  const prUsageQuery = usePullRequestUsage();
 
   const [aiDisclosureOpen, setAiDisclosureOpen] = React.useState(false);
   const [sandboxDisclosureOpen, setSandboxDisclosureOpen] = React.useState(false);
@@ -333,6 +335,33 @@ export default function SettingsPage() {
                       </span>
                     </div>
                   )}
+                </FieldGroup>
+              </FieldSet>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="border-b">
+              <CardTitle>Pull Request Quotas & Security</CardTitle>
+              <CardDescription>
+                Automated fixes are submitted as isolated pull requests with human-gated merges.
+              </CardDescription>
+              <CardAction>
+                <GitPullRequestIcon className="size-4 text-muted-foreground" />
+              </CardAction>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <FieldSet className="max-w-2xl">
+                <FieldGroup>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-medium text-foreground">Today&apos;s PR Creations</span>
+                    <span className="font-mono text-muted-foreground">
+                      {prUsageQuery.data?.countToday ?? 0} / {prUsageQuery.data?.limit ?? 10} used
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Workspaces are allocated 10 pull requests per UTC day to prevent accidental repository pollution or quota exhaustion.
+                  </p>
                 </FieldGroup>
               </FieldSet>
             </CardContent>

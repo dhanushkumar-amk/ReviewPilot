@@ -103,6 +103,7 @@ model Organization {
   sandboxEnabledAt    DateTime?
   fixValidations      FixValidation[]
   sandboxUsages       SandboxUsage[]
+  pullRequests        PullRequest[]
 
   @@unique([slug])
   @@map("organization")
@@ -172,6 +173,7 @@ model GithubInstallation {
   htmlUrl             String
   suspendedAt         DateTime?
   lastSyncedAt        DateTime?
+  permissions         Json?
   createdAt           DateTime                  @default(now())
   updatedAt           DateTime                  @updatedAt
   repositories        Repository[]
@@ -197,6 +199,7 @@ model Repository {
   updatedAt      DateTime           @updatedAt
   scans          Scan[]
   findings       Finding[]
+  pullRequests   PullRequest[]
 
   @@unique([workspaceId, provider, externalId])
   @@index([workspaceId])
@@ -323,6 +326,7 @@ model Finding {
   resolvedAt   DateTime?
   insights     FindingInsight[]
   fixProposals FixProposal[]
+  pullRequests PullRequest[]
 
   @@unique([repositoryId, fingerprint])
   @@index([workspaceId])
@@ -387,6 +391,7 @@ model FixProposal {
   createdByUserId String
   createdAt       DateTime              @default(now())
   validations     FixValidation[]
+  pullRequest     PullRequest?
 
   @@index([workspaceId])
   @@index([findingId])
@@ -453,3 +458,64 @@ model AiUsage {
   @@index([workspaceId])
   @@map("ai_usage")
 }
+
+enum PullRequestStatus {
+  CREATING
+  OPEN
+  MERGED
+  CLOSED
+  FAILED
+}
+
+model PullRequest {
+  id              String            @id @default(cuid())
+  workspaceId     String
+  workspace       Organization      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  repositoryId    String
+  repository      Repository        @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  findingId       String
+  finding         Finding           @relation(fields: [findingId], references: [id], onDelete: Cascade)
+  fixProposalId   String            @unique
+  fixProposal     FixProposal       @relation(fields: [fixProposalId], references: [id], onDelete: Cascade)
+  validationId    String?
+  githubNumber    Int?
+  htmlUrl         String?
+  branchName      String
+  baseBranch      String
+  headSha         String?
+  title           String
+  status          PullRequestStatus @default(CREATING)
+  errorCode       String?
+  riskLevel       String            @default("LOW")
+  testsRun        Boolean           @default(false)
+  mergedAt        DateTime?
+  mergedByUserId  String?
+  closedAt        DateTime?
+  createdByUserId String
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  lastSyncedAt    DateTime?
+
+  @@unique([repositoryId, githubNumber])
+  @@index([workspaceId])
+  @@index([repositoryId])
+  @@index([findingId])
+  @@index([workspaceId, createdAt(sort: Desc)])
+  @@map("pull_request")
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  workspaceId String
+  actorUserId String?
+  action      String
+  targetType  String
+  targetId    String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([workspaceId])
+  @@index([workspaceId, createdAt(sort: Desc)])
+  @@map("audit_log")
+}
+

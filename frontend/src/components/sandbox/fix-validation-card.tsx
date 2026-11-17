@@ -86,11 +86,13 @@ const ERROR_MESSAGES: Record<string, { title: string; desc: string }> = {
 interface FixValidationCardProps {
   proposalId: string;
   initialValidation?: FixValidation | null;
+  onValidationChange?: (validation: FixValidation | null) => void;
 }
 
 export function FixValidationCard({
   proposalId,
   initialValidation,
+  onValidationChange,
 }: FixValidationCardProps) {
   const { activeWorkspace } = useWorkspace();
   const role = activeWorkspace?.role?.trim().toLowerCase();
@@ -108,6 +110,11 @@ export function FixValidationCard({
   const validationQuery = useFixValidation(activeValidationId);
 
   const validation = validationQuery.data ?? initialValidation;
+
+  React.useEffect(() => {
+    onValidationChange?.(validation ?? null);
+  }, [validation, onValidationChange]);
+
   const isRunning =
     validation?.status === "QUEUED" ||
     validation?.status === "RUNNING" ||

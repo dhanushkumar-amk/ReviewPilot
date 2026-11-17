@@ -238,6 +238,17 @@ export async function aiRoutes(app: FastifyInstance): Promise<void> {
           findingId: id,
           ...wsScope,
         },
+        include: {
+          pullRequest: {
+            select: {
+              id: true,
+              githubNumber: true,
+              htmlUrl: true,
+              status: true,
+              branchName: true,
+            },
+          },
+        },
         orderBy: { createdAt: "desc" },
       });
 
@@ -255,6 +266,18 @@ export async function aiRoutes(app: FastifyInstance): Promise<void> {
         where: {
           id,
           ...workspaceWhere(request),
+        },
+        include: {
+          pullRequest: {
+            select: {
+              id: true,
+              githubNumber: true,
+              htmlUrl: true,
+              status: true,
+              branchName: true,
+              baseBranch: true,
+            },
+          },
         },
       });
 
@@ -296,6 +319,7 @@ export async function aiRoutes(app: FastifyInstance): Promise<void> {
           latestValidation,
         },
         latestValidation,
+        pullRequest: proposal.pullRequest,
       };
     },
   );

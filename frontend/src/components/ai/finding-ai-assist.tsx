@@ -5,17 +5,30 @@ import {
   AlertCircleIcon,
   BotIcon,
   CheckCircle2Icon,
+  ExternalLinkIcon,
+  GitPullRequestIcon,
   InfoIcon,
+  ShieldAlertIcon,
   SparklesIcon,
   Wand2Icon,
   XCircleIcon,
 } from "lucide-react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { MarkdownView } from "@/components/markdown-view";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -26,6 +39,8 @@ import {
 } from "@/components/ui/tooltip";
 import { AiDisclosureDialog } from "@/components/ai/ai-disclosure-dialog";
 import { FixValidationCard } from "@/components/sandbox/fix-validation-card";
+import { PullRequestSheet } from "@/components/pull-requests/pull-request-sheet";
+import { useCreatePullRequest } from "@/src/features/pull-requests/use-pull-requests";
 import type { FixValidation } from "@/src/features/sandbox/use-sandbox";
 import {
   useAiSettings,
@@ -51,12 +66,18 @@ export function FindingAiAssist({ finding }: FindingAiAssistProps) {
   const explainMutation = useExplainFinding();
   const draftFixMutation = useDraftFix();
   const discardMutation = useDiscardProposal();
+  const createPrMutation = useCreatePullRequest();
 
   const [disclosureOpen, setDisclosureOpen] = React.useState(false);
   const [explanation, setExplanation] = React.useState<ExplainResult | null>(null);
   const [fixProposal, setFixProposal] = React.useState<FixProposal | null>(null);
   const [canFixOutcome, setCanFixOutcome] = React.useState<string | null>(null);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const [liveValidation, setLiveValidation] = React.useState<FixValidation | null>(null);
+  const [riskDialogOpen, setRiskDialogOpen] = React.useState(false);
+  const [riskAcknowledged, setRiskAcknowledged] = React.useState(false);
+  const [prSheetOpen, setPrSheetOpen] = React.useState(false);
+  const [prSheetId, setPrSheetId] = React.useState<string | null>(null);
 
   const aiEnabled = aiSettingsQuery.data?.aiEnabled ?? false;
   const isSecret = finding.category === "SECRET";
@@ -93,6 +114,29 @@ export function FindingAiAssist({ finding }: FindingAiAssistProps) {
       toast.success("Fix draft discarded");
     } catch {
       toast.error("Failed to discard fix draft");
+    }
+  };
+
+  const handleCreatePr = async (acknowledgeRisk = false) => {
+    if (!fixProposal) return;
+    try {
+      const res = await createPrMutation.mutateAsync({
+        fixProposalId: fixProposal.id,
+        acknowledgeRisk,
+      });
+
+      toast.success(
+        res.alreadyExists
+          ? "Pull request already exists"
+          : "Pull request created successfully on GitHub!"
+      );
+      setRiskDialogOpen(false);
+      setFixProposal((prev) => (prev ? { ...prev, pullRequest: res.pullRequest } : null));
+      setPrSheetId(res.pullRequest.id);
+      setPrSheetOpen(true);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err || "Failed to create pull request");
+      toast.error(msg);
     }
   };
 
@@ -376,31 +420,194 @@ export function FindingAiAssist({ finding }: FindingAiAssistProps) {
                 <FixValidationCard
                   proposalId={fixProposal.id}
                   initialValidation={fixProposal.latestValidation as FixValidation | undefined}
+                  onValidationChange={setLiveValidation}
                 />
 
-                <div className="flex items-center justify-end gap-2 pt-1 border-t border-border/60">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger
-                        render={
-                          <span className="inline-flex cursor-not-allowed">
-                            <Button size="sm" disabled className="h-8 text-xs font-medium">
-                              Create pull request
-                            </Button>
+                {/* PR Creation & Status Section */}
+                {(() => {
+                  const effectiveVal =
+                    liveValidation ?? (fixProposal.latestValidation as FixValidation | undefined);
+                  const isValPassed =
+                    effectiveVal?.status === "PASSED" ||
+                    effectiveVal?.status === "PASSED_WITH_WARNINGS";
+                  const isHighRisk = effectiveVal?.riskLevel === "HIGH";
+                  const existingPr = (fixProposal as {
+                    pullRequest?: {
+                      id: string;
+                      githubNumber?: number | null;
+                      htmlUrl?: string | null;
+                      status: string;
+                    };
+                  }).pullRequest;
+
+                  if (existingPr) {
+                    return (
+                      <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/60">
+                        <div className="flex items-center gap-2 text-xs">
+                          <GitPullRequestIcon className="size-4 text-purple-600 dark:text-purple-400" />
+                          <span className="font-medium text-foreground">
+                            {existingPr.githubNumber ? `PR #${existingPr.githubNumber}` : "Draft PR"}
                           </span>
-                        }
-                      />
-                      <TooltipContent>
-                        Pull requests arrive in the next step. Only fixes that pass their checks will be allowed.
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
+                          <Badge
+                            variant="secondary"
+                            className="text-[10px] bg-purple-500/15 text-purple-600 border-purple-500/30 font-medium"
+                          >
+                            {existingPr.status}
+                          </Badge>
+                          {existingPr.htmlUrl && (
+                            <Link
+                              href={existingPr.htmlUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-primary hover:underline inline-flex items-center gap-1 font-medium"
+                            >
+                              <span>GitHub</span>
+                              <ExternalLinkIcon className="size-3" />
+                            </Link>
+                          )}
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setPrSheetId(existingPr.id);
+                            setPrSheetOpen(true);
+                          }}
+                          className="h-8 text-xs font-medium"
+                        >
+                          PR Details & Merge
+                        </Button>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/60">
+                      <div className="text-[11px] text-muted-foreground">
+                        {!isValPassed
+                          ? effectiveVal?.status === "QUEUED" || effectiveVal?.status === "RUNNING"
+                            ? "Waiting for validation to complete before opening PR..."
+                            : "Validation must pass before creating a pull request."
+                          : isHighRisk
+                          ? "High risk fix — workspace admin risk acknowledgment required."
+                          : "Validation passed. Ready to create pull request."}
+                      </div>
+
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger
+                            render={
+                              <span
+                                className={
+                                  !isValPassed ? "inline-flex cursor-not-allowed" : "inline-flex"
+                                }
+                              >
+                                <Button
+                                  size="sm"
+                                  disabled={!isValPassed || createPrMutation.isPending}
+                                  onClick={() => {
+                                    if (isHighRisk) {
+                                      if (!isOwnerOrAdmin) {
+                                        toast.error(
+                                          "Only workspace owners or admins can submit HIGH risk fixes"
+                                        );
+                                        return;
+                                      }
+                                      setRiskDialogOpen(true);
+                                    } else {
+                                      void handleCreatePr(false);
+                                    }
+                                  }}
+                                  className="h-8 text-xs font-medium gap-1.5"
+                                >
+                                  {createPrMutation.isPending ? (
+                                    <Spinner className="size-3.5" />
+                                  ) : (
+                                    <GitPullRequestIcon className="size-3.5" />
+                                  )}
+                                  <span>Create pull request</span>
+                                </Button>
+                              </span>
+                            }
+                          />
+                          {!isValPassed && (
+                            <TooltipContent>
+                              Run validation checks first. Only PASSED fixes can create a pull request.
+                            </TooltipContent>
+                          )}
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  );
+                })()}
               </CardContent>
             </Card>
           )}
         </div>
       )}
+
+      {/* High Risk Confirmation Dialog */}
+      <Dialog open={riskDialogOpen} onOpenChange={setRiskDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-base flex items-center gap-2 text-amber-600 dark:text-amber-400">
+              <ShieldAlertIcon className="size-5" />
+              <span>Acknowledge High-Risk Fix</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              This automated fix involves structural changes or modified safety patterns. As an admin, you must explicitly acknowledge the risk.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-3 py-2 text-xs">
+            <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 text-xs">
+              <span className="font-semibold block mb-1">Risk Factors Detected:</span>
+              <ul className="list-disc list-inside text-muted-foreground space-y-0.5">
+                <li>Code boundaries or signature modifications</li>
+                <li>Changes exceeding moderate line modification thresholds</li>
+              </ul>
+            </div>
+
+            <div className="flex items-center gap-2 pt-2">
+              <Checkbox
+                id="risk-ack"
+                checked={riskAcknowledged}
+                onCheckedChange={(c) => setRiskAcknowledged(Boolean(c))}
+              />
+              <label htmlFor="risk-ack" className="text-xs font-medium cursor-pointer">
+                I acknowledge the risk and approve creating a pull request
+              </label>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setRiskDialogOpen(false)}
+              className="text-xs"
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              disabled={!riskAcknowledged || createPrMutation.isPending}
+              onClick={() => void handleCreatePr(true)}
+              className="gap-1.5 text-xs font-medium"
+            >
+              {createPrMutation.isPending ? <Spinner className="size-3.5" /> : null}
+              <span>Confirm & Create PR</span>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Pull Request Detail Sheet */}
+      <PullRequestSheet
+        pullRequestId={prSheetId}
+        open={prSheetOpen}
+        onOpenChange={setPrSheetOpen}
+      />
 
       <AiDisclosureDialog
         open={disclosureOpen}

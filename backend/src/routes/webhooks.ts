@@ -244,12 +244,6 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
         }
 
         const senderLogin = push.sender?.login ?? "";
-        if (
-          senderLogin.endsWith("[bot]") &&
-          senderLogin === `${env.GITHUB_APP_SLUG}[bot]`
-        ) {
-          return ignore("self_bot_push");
-        }
 
         const pushInstallationId = push.installation
           ? BigInt(push.installation.id)
