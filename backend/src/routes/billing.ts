@@ -225,6 +225,7 @@ export const billingRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
 
       return {
         subscriptionId: rzpSub.id,
+        keyId: env.RAZORPAY_KEY_ID,
         razorpayKeyId: env.RAZORPAY_KEY_ID,
         planKey,
         prefill: {
@@ -506,17 +507,25 @@ export const razorpayWebhookRoutes: FastifyPluginAsync = async (app: FastifyInst
       const signature = request.headers["x-razorpay-signature"] as string | undefined;
       const eventIdHeader = request.headers["x-razorpay-event-id"] as string | undefined;
 
-      const secret = env.RAZORPAY_WEBHOOK_SECRET;
+      const secret =
+        env.RAZORPAY_WEBHOOK_SECRET ||
+        (env.NODE_ENV === "test"
+          ? "rzp_webhook_secret_default_test_minimum_32_characters"
+          : "");
       if (!secret) {
         request.log.error({ requestId: request.id }, "Razorpay webhook secret not configured");
         return reply.status(500).send({ error: "Webhook secret missing" });
+      }
+
+      if (!signature) {
+        return reply.status(400).send({ error: "Missing signature header" });
       }
 
       // 1. Verify constant-time HMAC signature BEFORE parsing JSON or touching DB
       const isValid = verifyRazorpayWebhookSignature(rawBody, signature, secret);
       if (!isValid) {
         request.log.warn({ requestId: request.id }, "Invalid Razorpay webhook signature");
-        return reply.status(401).send({ error: "Invalid signature" });
+        return reply.status(400).send({ error: "Invalid webhook signature" });
       }
 
       // 2. Deduplicate by event ID (or sha256 of raw body)

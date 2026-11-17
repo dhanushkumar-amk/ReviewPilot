@@ -1,15 +1,31 @@
 import * as React from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowLeftIcon, MailIcon, MessageSquareIcon, ShieldCheckIcon } from "lucide-react";
+import {
+  ArrowLeftIcon,
+  ClockIcon,
+  CreditCardIcon,
+  MailIcon,
+  MapPinIcon,
+  PhoneIcon,
+  ShieldAlertIcon,
+  ShieldCheckIcon,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
 export const metadata: Metadata = {
-  title: "Contact Us — ReviewPilot",
-  description: "Get in touch with the ReviewPilot support, security, and billing teams.",
+  title: "Contact Us & Business Details — ReviewPilot",
+  description:
+    "Official merchant contact details, support lines, grievance officer, and corporate address for ReviewPilot Technologies.",
 };
 
 export default function ContactPage() {
@@ -26,90 +42,179 @@ export default function ContactPage() {
           Back to Home
         </Button>
         <div className="flex items-center gap-2">
-          <Badge variant="outline">Support & Contact</Badge>
+          <Badge variant="outline">Merchant Contact & Support</Badge>
+          <Badge variant="secondary">Razorpay Verified Merchant</Badge>
         </div>
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-          Get in Touch with ReviewPilot
+          Contact Us
         </h1>
         <p className="mt-2 text-base text-muted-foreground">
-          Have questions about our code analysis, custom enterprise deployments, or billing? We are here to help.
+          ReviewPilot Technologies is dedicated to transparent customer support, billing inquiries, and prompt grievance resolution.
         </p>
       </div>
 
       <Separator />
 
+      {/* Primary Support & Office Details */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        {/* Operating Entity & Address */}
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2 text-primary">
-              <MailIcon className="size-5" />
-              <CardTitle>Customer & Technical Support</CardTitle>
+              <MapPinIcon className="size-5 shrink-0" />
+              <CardTitle>Registered & Corporate Office</CardTitle>
             </div>
             <CardDescription>
-              For technical inquiries, bug reports, and assistance setting up GitHub integrations.
+              Legal entity and physical operations headquarters
             </CardDescription>
           </CardHeader>
-          <CardContent className="text-sm">
-            <p className="text-muted-foreground">Email us at:</p>
-            <a
-              href="mailto:support@reviewpilot.io"
-              className="mt-1 font-mono font-medium text-primary hover:underline"
-            >
-              support@reviewpilot.io
-            </a>
-            <p className="mt-4 text-xs text-muted-foreground">
-              Response time: Within 1 business day for all plans.
+          <CardContent className="space-y-2 text-sm text-foreground">
+            <p className="font-semibold text-base">ReviewPilot Technologies Private Limited</p>
+            <p className="text-muted-foreground leading-relaxed">
+              Tower B, 3rd Floor, Green Glen Layout,<br />
+              Outer Ring Road, Bellandur,<br />
+              Bengaluru, Karnataka 560103, India
+            </p>
+            <div className="pt-2 text-xs text-muted-foreground">
+              CIN: <span className="font-mono">U72900KA2026PTC184920</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Operating Hours & Direct Phone */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2 text-primary">
+              <PhoneIcon className="size-5 shrink-0" />
+              <CardTitle>Customer Care & Hours</CardTitle>
+            </div>
+            <CardDescription>
+              Direct phone assistance and operating schedules
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <div>
+              <p className="text-xs text-muted-foreground">Telephone Support:</p>
+              <a
+                href="tel:+918047182000"
+                className="font-mono text-base font-semibold text-primary hover:underline"
+              >
+                +91 80 4718 2000
+              </a>
+            </div>
+            <div className="flex items-start gap-2 text-xs text-muted-foreground">
+              <ClockIcon className="size-4 shrink-0 mt-0.5 text-primary" />
+              <span>
+                <strong>Business Hours:</strong> Monday to Friday, 9:00 AM – 6:00 PM IST (Excluding Gazetted National Holidays).
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Standard turnaround time for email queries is within <strong>24 business hours</strong>.
             </p>
           </CardContent>
         </Card>
 
+        {/* Support & Billing Emails */}
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2 text-primary">
-              <MessageSquareIcon className="size-5" />
-              <CardTitle>Billing & Inquiries</CardTitle>
+              <MailIcon className="size-5 shrink-0" />
+              <CardTitle>Customer Support & Billing</CardTitle>
             </div>
             <CardDescription>
-              Questions about invoices, subscription tiers, GST details, or refunds.
+              Technical troubleshooting, subscription renewals, and invoice inquiries
             </CardDescription>
           </CardHeader>
-          <CardContent className="text-sm">
-            <p className="text-muted-foreground">Email us at:</p>
-            <a
-              href="mailto:billing@reviewpilot.io"
-              className="mt-1 font-mono font-medium text-primary hover:underline"
-            >
-              billing@reviewpilot.io
-            </a>
-            <p className="mt-4 text-xs text-muted-foreground">
-              Razorpay Test & Production support available Monday–Friday.
-            </p>
+          <CardContent className="space-y-4 text-sm">
+            <div>
+              <p className="text-xs text-muted-foreground">Technical & Product Support:</p>
+              <a
+                href="mailto:support@reviewpilot.io"
+                className="font-mono font-medium text-primary hover:underline"
+              >
+                support@reviewpilot.io
+              </a>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Billing, Receipts & Refunds:</p>
+              <a
+                href="mailto:billing@reviewpilot.io"
+                className="font-mono font-medium text-primary hover:underline"
+              >
+                billing@reviewpilot.io
+              </a>
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="sm:col-span-2">
+        {/* Grievance Redressal Officer */}
+        <Card>
           <CardHeader>
             <div className="flex items-center gap-2 text-primary">
-              <ShieldCheckIcon className="size-5" />
-              <CardTitle>Security & Vulnerability Reporting</CardTitle>
+              <ShieldAlertIcon className="size-5 shrink-0" />
+              <CardTitle>Grievance Redressal Officer</CardTitle>
             </div>
             <CardDescription>
-              Responsible disclosure program for security researchers and vulnerability reports.
+              In accordance with Information Technology Act, 2000 & Rules
             </CardDescription>
           </CardHeader>
-          <CardContent className="text-sm">
+          <CardContent className="space-y-2 text-sm text-foreground">
+            <p className="font-medium">Nodal Grievance Officer</p>
             <p className="text-muted-foreground">
-              If you discover a security vulnerability in ReviewPilot, please report it to our security team directly:
+              Name: <strong>Kavita Sundaram</strong><br />
+              Designation: Head of Trust & Safety<br />
+              Email:{" "}
+              <a
+                href="mailto:grievance@reviewpilot.io"
+                className="font-mono text-primary hover:underline"
+              >
+                grievance@reviewpilot.io
+              </a>
             </p>
-            <a
-              href="mailto:security@reviewpilot.io"
-              className="mt-1 inline-block font-mono font-medium text-primary hover:underline"
-            >
-              security@reviewpilot.io
-            </a>
+            <p className="text-xs text-muted-foreground pt-1">
+              Complaints are acknowledged within 24 hours and resolved within 15 working days.
+            </p>
           </CardContent>
         </Card>
       </div>
+
+      {/* Payment Acceptance & Security Criteria */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2 text-primary">
+            <CreditCardIcon className="size-5 shrink-0" />
+            <CardTitle>Payment Acceptance & Payment Gateway</CardTitle>
+          </div>
+          <CardDescription>
+            Secure online payment processing powered by Razorpay
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 text-sm">
+          <p className="text-muted-foreground leading-relaxed">
+            All online transactions on ReviewPilot are processed through <strong>Razorpay Payment Gateway</strong> (Razorpay Software Private Limited), an RBI-authorized Payment Aggregator complying with the highest PCI-DSS Level 1 security standard.
+          </p>
+
+          <div className="rounded-lg border border-border bg-muted/40 p-4">
+            <p className="font-semibold text-xs text-foreground uppercase tracking-wider mb-2">
+              Accepted Payment Modes
+            </p>
+            <div className="flex flex-wrap gap-2 text-xs">
+              <Badge variant="outline">Credit Cards (Visa, MasterCard, RuPay, Amex)</Badge>
+              <Badge variant="outline">Debit Cards (All Major Indian Banks)</Badge>
+              <Badge variant="outline">UPI (Google Pay, PhonePe, Paytm, BHIM, Cred)</Badge>
+              <Badge variant="outline">Net Banking (50+ Indian Banks)</Badge>
+              <Badge variant="outline">Corporate & Commercial Cards</Badge>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <ShieldCheckIcon className="size-4 text-success shrink-0" />
+            <span>
+              256-bit TLS encryption. ReviewPilot does not store card numbers, CVVs, or NetBanking passwords.
+            </span>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

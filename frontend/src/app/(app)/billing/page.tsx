@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import Script from "next/script";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -139,15 +140,17 @@ export default function BillingPage() {
 
     try {
       const order = await subscribeMutation.mutateAsync({ planKey });
+      const key = order.keyId || order.razorpayKeyId;
 
       const options = {
-        key: order.keyId,
+        key,
         subscription_id: order.subscriptionId,
         name: "ReviewPilot",
         description:
           order.planKey === "PREMIUM_MONTHLY"
             ? "ReviewPilot Premium (Monthly)"
             : "ReviewPilot Premium (Yearly)",
+        prefill: order.prefill,
         theme: {
           color: getComputedPrimaryColor(),
         },
@@ -659,6 +662,32 @@ export default function BillingPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Merchant Compliance Footer */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-muted-foreground border-t border-border pt-4">
+        <div>
+          <span>ReviewPilot Technologies Private Limited</span>
+          <span className="mx-2">•</span>
+          <span>Processed securely by Razorpay Payment Gateway</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-4">
+          <Link href="/terms" className="hover:underline">
+            Terms of Service
+          </Link>
+          <Link href="/privacy" className="hover:underline">
+            Privacy Policy
+          </Link>
+          <Link href="/refund-policy" className="hover:underline">
+            Refund & Cancellation
+          </Link>
+          <Link href="/delivery-policy" className="hover:underline">
+            Delivery Policy
+          </Link>
+          <Link href="/contact" className="hover:underline font-medium text-foreground">
+            Contact Us
+          </Link>
+        </div>
+      </div>
 
       {/* Cancellation Dialog */}
       <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>

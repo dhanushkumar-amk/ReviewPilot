@@ -7,36 +7,50 @@ import {
 
 export const metadata = buildLegalMetadata(
   "Refund & Cancellation Policy",
-  "ReviewPilot cancellation and refund terms for Premium subscriptions."
+  "ReviewPilot cancellation terms, dispute process, and 5-7 business day refund timelines for Razorpay payments."
 );
 
 const sections: LegalSection[] = [
   {
-    id: "overview",
-    title: "Subscription Cancellation",
+    id: "cancellation",
+    title: "1. Subscription Cancellation Policy",
+    summary: "Cancel anytime from your dashboard with zero lock-in or cancellation fees.",
     paragraphs: [
-      "You may cancel your ReviewPilot Premium subscription at any time directly through the Billing settings page.",
-      "When you cancel, auto-renewal is immediately disabled. You will retain full access to all Premium plan limits and features until the end of your current paid billing period.",
+      "ReviewPilot offers transparent, self-serve subscription management. You can cancel your subscription at any time by navigating to Dashboard -> Billing and clicking 'Cancel subscription'.",
+      "Upon cancellation, auto-renewal will be turned off immediately. You will retain full access to all Premium features, quotas, and history until the end of your currently paid billing period. After this date, your workspace automatically switches to the Free tier without data loss.",
     ],
   },
   {
-    id: "refunds",
-    title: "Refund Eligibility",
+    id: "refund-criteria",
+    title: "2. Refund Eligibility & Criteria",
+    summary: "Clear guidelines on refund requests and account credits.",
     paragraphs: [
-      "Because ReviewPilot offers a fully functional Free tier to evaluate our automated code analysis, subscriptions are generally non-refundable once billed.",
-      "If you experience technical issues or accidental duplicate charges, please contact our support team within 7 days of the charge for review.",
+      "Because ReviewPilot provides an ongoing, fully functional Free tier to evaluate all core static code analysis and PR scanning workflows prior to upgrade, recurring subscription fees are generally non-refundable once billed.",
+      "However, we review refund requests under the following eligible circumstances:",
     ],
     bullets: [
-      "Monthly subscriptions: Non-refundable once the billing period has begun.",
-      "Annual subscriptions: Eligible for prorated refund consideration within 14 days of initial charge if no major scans have occurred.",
-      "Failed payments: You are given a 3-day grace period to update payment details before Premium access is suspended.",
+      "Duplicate / Erroneous Billing: If your account is billed multiple times for the same subscription cycle due to a technical glitch, duplicate charges will be refunded in full.",
+      "Unintended Renewal: If you intended to cancel before renewal and contact us within 48 hours of charge without initiating new scans, we will process a full refund.",
+      "Annual Plan Proration: Annual subscriptions cancelled within 7 calendar days of purchase are eligible for a full refund minus any third-party gateway processing fees.",
+      "Service Unavailability: If sustained, continuous downtime exceeding 72 consecutive hours prevents access to core scanning features, customers may request a prorated credit.",
     ],
   },
   {
-    id: "contact",
-    title: "Contacting Support",
+    id: "refund-turnaround",
+    title: "3. Refund Processing Timelines & Source Credit",
+    summary: "Refunds are processed within 5 to 7 business days directly to the original payment method.",
     paragraphs: [
-      "For billing questions, invoice receipts, or refund requests, please contact us via email at billing@reviewpilot.io or through our contact page.",
+      "Once a refund request is reviewed and approved by our billing team, the refund will be initiated through our payment partner Razorpay.",
+      "In strict accordance with banking standards, all refunds are credited back to the original source of payment (original Credit Card, Debit Card, NetBanking account, or UPI VPA used during checkout) within 5 to 7 business days.",
+      "Please note that the exact posting date onto your account statement depends on your card-issuing bank or payment institution.",
+    ],
+  },
+  {
+    id: "how-to-request",
+    title: "4. How to Request a Refund",
+    paragraphs: [
+      "To request a refund or raise a billing dispute, email our billing department directly at billing@reviewpilot.io with your workspace name, registered email address, and the Razorpay Payment ID (e.g., pay_xxxxxxxxxxxxxx).",
+      "All requests receive written acknowledgment within 24 business hours.",
     ],
   },
 ];
@@ -45,12 +59,12 @@ export default function RefundPolicyPage() {
   return (
     <LegalDocument
       activeSlug="refund-policy"
-      badge="Billing & Subscriptions"
+      badge="Billing & Payments"
       title="Refund & Cancellation Policy"
-      description="Clear, transparent terms governing renewals, cancellations, and refunds for ReviewPilot subscriptions."
+      description="Transparent cancellation rules and standard 5 to 7 business day refund turnaround times for ReviewPilot subscriptions."
       effectiveDate="November 17, 2026"
-      highlightTitle="Cancel anytime with zero penalty"
-      highlightBody="Cancellations take effect at the conclusion of your active billing period. You keep Premium features until your cycle completes."
+      highlightTitle="Standard 5–7 day refund turnaround"
+      highlightBody="Approved refunds are credited directly back to your original payment method (Card/UPI/NetBanking) within 5 to 7 business days via Razorpay."
       sections={sections}
     />
   );

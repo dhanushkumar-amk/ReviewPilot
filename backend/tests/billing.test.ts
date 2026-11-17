@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { describe, expect, it, beforeAll, afterAll } from "vitest";
+import { describe, expect, it, beforeAll, afterAll, vi } from "vitest";
 import type { FastifyInstance } from "fastify";
 import { buildApp } from "../src/app.js";
 import { prisma } from "../src/db.js";
@@ -7,13 +7,10 @@ import { env } from "../src/env.js";
 import {
   PLAN_LIMITS,
   PLANS_DISPLAY,
-  FREE_PLAN_LIMITS,
-  PREMIUM_PLAN_LIMITS,
 } from "../src/billing/plans.js";
 import {
   verifyRazorpayWebhookSignature,
   verifyRazorpayCheckoutSignature,
-  createRazorpaySubscription,
 } from "../src/billing/razorpay.js";
 import {
   getEntitlements,
@@ -27,8 +24,6 @@ import {
 
 describe("Razorpay Billing & Plan Limits", () => {
   let app: FastifyInstance;
-  const createdWorkspaceIds: string[] = [];
-  const createdUserIds: string[] = [];
 
   beforeAll(async () => {
     app = await buildApp();
@@ -36,49 +31,30 @@ describe("Razorpay Billing & Plan Limits", () => {
   });
 
   afterAll(async () => {
-    if (createdWorkspaceIds.length > 0) {
-      await prisma.billingPayment.deleteMany({
-        where: { workspaceId: { in: createdWorkspaceIds } },
-      });
-      await prisma.billingSubscription.deleteMany({
-        where: { workspaceId: { in: createdWorkspaceIds } },
-      });
-      await prisma.repository.deleteMany({
-        where: { workspaceId: { in: createdWorkspaceIds } },
-      });
-      await prisma.organization.deleteMany({
-        where: { id: { in: createdWorkspaceIds } },
-      });
-    }
-    if (createdUserIds.length > 0) {
-      await prisma.user.deleteMany({
-        where: { id: { in: createdUserIds } },
-      });
-    }
     await app.close();
   });
 
   describe("Plan configurations & pricing", () => {
     it("enforces Free plan limits strictly", () => {
-      expect(FREE_PLAN_LIMITS.maxRepositories).toBe(1);
-      expect(FREE_PLAN_LIMITS.maxScansPerMonth).toBe(30);
-      expect(FREE_PLAN_LIMITS.maxAiFixDraftsPerMonth).toBe(3);
-      expect(FREE_PLAN_LIMITS.historyDays).toBe(7);
-      expect(FREE_PLAN_LIMITS.maxMembers).toBe(1);
+      expect(PLAN_LIMITS.FREE.maxRepositories).toBe(1);
+      expect(PLAN_LIMITS.FREE.maxScansPerMonth).toBe(30);
+      expect(PLAN_LIMITS.FREE.maxAiFixDraftsPerMonth).toBe(3);
+      expect(PLAN_LIMITS.FREE.historyDays).toBe(7);
+      expect(PLAN_LIMITS.FREE.maxMembers).toBe(1);
     });
 
     it("enforces Premium plan limits strictly", () => {
-      expect(PREMIUM_PLAN_LIMITS.maxRepositories).toBe(10);
-      expect(PREMIUM_PLAN_LIMITS.maxScansPerMonth).toBe(1000);
-      expect(PREMIUM_PLAN_LIMITS.maxAiFixDraftsPerMonth).toBe(50);
-      expect(PREMIUM_PLAN_LIMITS.historyDays).toBe(90);
-      expect(PREMIUM_PLAN_LIMITS.maxMembers).toBe(5);
+      expect(PLAN_LIMITS.PREMIUM.maxRepositories).toBe(10);
+      expect(PLAN_LIMITS.PREMIUM.maxScansPerMonth).toBe(1000);
+      expect(PLAN_LIMITS.PREMIUM.maxAiFixDraftsPerMonth).toBe(50);
+      expect(PLAN_LIMITS.PREMIUM.historyDays).toBe(90);
+      expect(PLAN_LIMITS.PREMIUM.maxMembers).toBe(5);
     });
 
     it("has server-authoritative display pricing in paise", () => {
-      expect(PLANS_DISPLAY.PREMIUM_MONTHLY.amount).toBe(79900);
+      expect(PLANS_DISPLAY.PREMIUM_MONTHLY.amountPaise).toBe(79900);
       expect(PLANS_DISPLAY.PREMIUM_MONTHLY.currency).toBe("INR");
-      expect(PLANS_DISPLAY.PREMIUM_YEARLY.amount).toBe(799900);
+      expect(PLANS_DISPLAY.PREMIUM_YEARLY.amountPaise).toBe(799900);
       expect(PLANS_DISPLAY.PREMIUM_YEARLY.currency).toBe("INR");
     });
   });
@@ -117,7 +93,12 @@ describe("Razorpay Billing & Plan Limits", () => {
       const payload = `${paymentId}|${subscriptionId}`;
       const validSig = crypto.createHmac("sha256", keySecret).update(payload).digest("hex");
 
-      const isValid = verifyRazorpayCheckoutSignature(paymentId, subscriptionId, validSig, keySecret);
+      const isValid = verifyRazorpayCheckoutSignature({
+        paymentId,
+        subscriptionId,
+        signature: validSig,
+        keySecret,
+      });
       expect(isValid).toBe(true);
     });
 
@@ -127,12 +108,12 @@ describe("Razorpay Billing & Plan Limits", () => {
       const payload = `${paymentId}|${subscriptionId}`;
       const validSig = crypto.createHmac("sha256", keySecret).update(payload).digest("hex");
 
-      const isTampered = verifyRazorpayCheckoutSignature(
-        "pay_tampered_999",
+      const isTampered = verifyRazorpayCheckoutSignature({
+        paymentId: "pay_tampered_999",
         subscriptionId,
-        validSig,
-        keySecret
-      );
+        signature: validSig,
+        keySecret,
+      });
       expect(isTampered).toBe(false);
     });
   });
@@ -158,7 +139,7 @@ describe("Razorpay Billing & Plan Limits", () => {
         status: "PENDING",
         currentPeriodEnd: new Date(Date.now() - 86400000),
         cancelAtPeriodEnd: false,
-        graceUntil: new Date(Date.now() + 86400000), // grace active
+        graceUntil: new Date(Date.now() + 86400000),
       });
       expect(tier).toBe("PREMIUM");
     });
@@ -168,7 +149,7 @@ describe("Razorpay Billing & Plan Limits", () => {
         status: "PENDING",
         currentPeriodEnd: new Date(Date.now() - 86400000),
         cancelAtPeriodEnd: false,
-        graceUntil: new Date(Date.now() - 3600000), // grace expired
+        graceUntil: new Date(Date.now() - 3600000),
       });
       expect(tier).toBe("FREE");
     });
@@ -176,7 +157,7 @@ describe("Razorpay Billing & Plan Limits", () => {
     it("evaluates CANCELLED subscription before period end as PREMIUM", () => {
       const tier = evaluatePlanTier({
         status: "CANCELLED",
-        currentPeriodEnd: new Date(Date.now() + 86400000), // still in current cycle
+        currentPeriodEnd: new Date(Date.now() + 86400000),
         cancelAtPeriodEnd: true,
         graceUntil: null,
       });
@@ -186,7 +167,7 @@ describe("Razorpay Billing & Plan Limits", () => {
     it("evaluates CANCELLED subscription after period end as FREE", () => {
       const tier = evaluatePlanTier({
         status: "CANCELLED",
-        currentPeriodEnd: new Date(Date.now() - 86400000), // period has elapsed
+        currentPeriodEnd: new Date(Date.now() - 86400000),
         cancelAtPeriodEnd: true,
         graceUntil: null,
       });
@@ -195,56 +176,33 @@ describe("Razorpay Billing & Plan Limits", () => {
   });
 
   describe("Multi-tenant workspace limits & repo pause enforcement", () => {
-    let workspaceId: string;
-    let repo1Id: string;
-    let repo2Id: string;
+    const workspaceId = "ws-mock-billing-test";
 
-    beforeAll(async () => {
-      const org = await prisma.organization.create({
-        data: {
-          id: `org_test_billing_${crypto.randomUUID().slice(0, 8)}`,
-          name: "Test Billing Org",
-          slug: `test-billing-${crypto.randomUUID().slice(0, 8)}`,
-        },
-      });
-      workspaceId = org.id;
-      createdWorkspaceIds.push(workspaceId);
+    beforeAll(() => {
+      vi.spyOn(prisma.billingSubscription, "findUnique").mockResolvedValue(null);
+      vi.spyOn(prisma.repository, "count").mockResolvedValue(2);
+      vi.spyOn(prisma.scan, "count").mockResolvedValue(31);
+      vi.spyOn(prisma.fixProposal, "count").mockResolvedValue(4);
+      vi.spyOn(prisma.member, "count").mockResolvedValue(1);
 
-      const r1 = await prisma.repository.create({
-        data: {
-          workspaceId,
-          provider: "GITHUB",
-          externalId: `ext_${crypto.randomUUID().slice(0, 8)}`,
-          fullName: "test-owner/test-repo-1",
-          defaultBranch: "main",
-          status: "CONNECTED",
-          createdAt: new Date("2026-01-01T00:00:00Z"),
-        },
-      });
-      repo1Id = r1.id;
+      vi.spyOn(prisma.repository, "findMany").mockResolvedValue([
+        { id: "repo-1" } as any,
+        { id: "repo-2" } as any,
+      ]);
+    });
 
-      const r2 = await prisma.repository.create({
-        data: {
-          workspaceId,
-          provider: "GITHUB",
-          externalId: `ext_${crypto.randomUUID().slice(0, 8)}`,
-          fullName: "test-owner/test-repo-2",
-          defaultBranch: "main",
-          status: "CONNECTED",
-          createdAt: new Date("2026-01-02T00:00:00Z"),
-        },
-      });
-      repo2Id = r2.id;
+    afterAll(() => {
+      vi.restoreAllMocks();
     });
 
     it("allows the 1st repository under Free limit and pauses the 2nd repository", async () => {
       invalidateEntitlementsCache(workspaceId);
 
-      const check1 = await isRepositoryAllowedByPlan(workspaceId, repo1Id);
+      const check1 = await isRepositoryAllowedByPlan(workspaceId, "repo-1");
       expect(check1.allowed).toBe(true);
       expect(check1.rank).toBe(1);
 
-      const check2 = await isRepositoryAllowedByPlan(workspaceId, repo2Id);
+      const check2 = await isRepositoryAllowedByPlan(workspaceId, "repo-2");
       expect(check2.allowed).toBe(false);
       expect(check2.rank).toBe(2);
       expect(check2.limit).toBe(1);
@@ -258,7 +216,25 @@ describe("Razorpay Billing & Plan Limits", () => {
       );
     });
 
+    it("assertWithinLimit throws PlanLimitError when scan limit is exceeded", async () => {
+      invalidateEntitlementsCache(workspaceId);
+
+      await expect(assertWithinLimit(workspaceId, "scans")).rejects.toThrow(
+        PlanLimitError
+      );
+    });
+
+    it("assertWithinLimit throws PlanLimitError when AI fix draft limit is exceeded", async () => {
+      invalidateEntitlementsCache(workspaceId);
+
+      await expect(assertWithinLimit(workspaceId, "aiFixDrafts")).rejects.toThrow(
+        PlanLimitError
+      );
+    });
+
     it("calculates history cutoff date for Free tier as 7 days ago", async () => {
+      invalidateEntitlementsCache(workspaceId);
+
       const cutoff = await getHistoryCutoffDate(workspaceId);
       expect(cutoff).toBeInstanceOf(Date);
 
@@ -305,17 +281,20 @@ describe("Razorpay Billing & Plan Limits", () => {
     it("deduplicates already processed webhook events", async () => {
       const eventId = `evt_dedupe_${crypto.randomUUID().slice(0, 10)}`;
       const payload = JSON.stringify({ event: "payment.captured", id: "pay_test_123" });
-      const secret = env.RAZORPAY_WEBHOOK_SECRET || "rzp_webhook_secret_default_test_minimum_32_characters";
+      const secret =
+        env.RAZORPAY_WEBHOOK_SECRET ||
+        "rzp_webhook_secret_default_test_minimum_32_characters";
       const signature = crypto.createHmac("sha256", secret).update(payload).digest("hex");
 
-      // Seed already processed event
-      await prisma.billingEvent.create({
-        data: {
-          eventId,
-          event: "payment.captured",
-          status: "PROCESSED",
-        },
-      });
+      vi.spyOn(prisma.billingEvent, "findUnique").mockResolvedValue({
+        id: "evt-id-1",
+        eventId,
+        event: "payment.captured",
+        status: "PROCESSED",
+        processedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as any);
 
       const response = await app.inject({
         method: "POST",
@@ -330,9 +309,9 @@ describe("Razorpay Billing & Plan Limits", () => {
 
       expect(response.statusCode).toBe(200);
       const json = response.json();
-      expect(json.status).toBe("deduplicated");
+      expect(json.status).toBe("duplicate");
 
-      await prisma.billingEvent.delete({ where: { eventId } });
+      vi.restoreAllMocks();
     });
   });
 });

@@ -72,9 +72,12 @@ export interface BillingResponse {
 export interface SubscribeResponse {
   subscriptionId: string;
   keyId: string;
+  razorpayKeyId?: string;
   planKey: "PREMIUM_MONTHLY" | "PREMIUM_YEARLY";
-  amount: number;
-  currency: string;
+  prefill?: {
+    name?: string;
+    email?: string;
+  };
 }
 
 export const BILLING_QUERY_KEY = ["billing"] as const;
