@@ -738,18 +738,23 @@ export default function RepositoriesPage() {
                                   repo.pausedByPlan ? (
                                     <TooltipProvider>
                                       <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <span>
-                                            <Button
-                                              type="button"
-                                              variant="outline"
-                                              size="sm"
-                                              disabled
-                                            >
-                                              <PlayIcon data-icon="inline-start" />
-                                              Scan now
-                                            </Button>
-                                          </span>
+                                        <TooltipTrigger
+                                          render={
+                                            <span
+                                              className="inline-flex cursor-not-allowed"
+                                              tabIndex={0}
+                                            />
+                                          }
+                                        >
+                                          <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            disabled
+                                          >
+                                            <PlayIcon data-icon="inline-start" />
+                                            Scan now
+                                          </Button>
                                         </TooltipTrigger>
                                         <TooltipContent>
                                           Repository is paused by plan limit. Upgrade to Premium to scan this repository.
@@ -809,17 +814,22 @@ export default function RepositoriesPage() {
                                   isRepoLimitReached ? (
                                     <TooltipProvider>
                                       <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <span>
-                                            <Button
-                                              type="button"
-                                              variant="default"
-                                              size="sm"
-                                              disabled
-                                            >
-                                              Connect
-                                            </Button>
-                                          </span>
+                                        <TooltipTrigger
+                                          render={
+                                            <span
+                                              className="inline-flex cursor-not-allowed"
+                                              tabIndex={0}
+                                            />
+                                          }
+                                        >
+                                          <Button
+                                            type="button"
+                                            variant="default"
+                                            size="sm"
+                                            disabled
+                                          >
+                                            Connect
+                                          </Button>
                                         </TooltipTrigger>
                                         <TooltipContent>
                                           Repository limit reached for your plan. Upgrade to Premium to connect more repositories.

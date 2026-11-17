@@ -148,11 +148,9 @@ export default function SettingsPage() {
         title="Settings"
         description="Configure workspace defaults, pull request merge policies, alert channels, and API credentials."
         actions={
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/billing">
-              <CreditCardIcon data-icon="inline-start" />
-              Billing & Subscription
-            </Link>
+          <Button variant="outline" size="sm" render={<Link href="/billing" />}>
+            <CreditCardIcon data-icon="inline-start" />
+            Billing & Subscription
           </Button>
         }
       />

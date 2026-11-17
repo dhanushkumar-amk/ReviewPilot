@@ -16,11 +16,14 @@ export default function ContactPage() {
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 py-12 sm:px-6">
       <div>
-        <Button variant="ghost" size="sm" asChild className="mb-4 -ml-2 text-muted-foreground">
-          <Link href="/">
-            <ArrowLeftIcon data-icon="inline-start" />
-            Back to Home
-          </Link>
+        <Button
+          variant="ghost"
+          size="sm"
+          render={<Link href="/" />}
+          className="mb-4 -ml-2 text-muted-foreground"
+        >
+          <ArrowLeftIcon data-icon="inline-start" />
+          Back to Home
         </Button>
         <div className="flex items-center gap-2">
           <Badge variant="outline">Support & Contact</Badge>

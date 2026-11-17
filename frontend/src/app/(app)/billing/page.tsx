@@ -8,7 +8,6 @@ import {
   AlertCircleIcon,
   CheckIcon,
   CopyIcon,
-  CreditCardIcon,
   FolderCodeIcon,
   RefreshCwIcon,
   ScanLineIcon,
@@ -64,12 +63,11 @@ import {
   useConfirmSubscription,
   useSubscribe,
   useSyncBilling,
-  type PlanDisplayInfo,
 } from "@/src/features/billing/use-billing";
 
 declare global {
   interface Window {
-    Razorpay?: any;
+    Razorpay?: new (options: Record<string, unknown>) => { open: () => void };
   }
 }
 
@@ -162,8 +160,9 @@ export default function BillingPage() {
             await confirmMutation.mutateAsync(response);
             setIsPolling(true);
             toast.success("Payment received! Activating your subscription...");
-          } catch (err: any) {
-            toast.error(err.message || "Failed to confirm payment signature.");
+          } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Failed to confirm payment signature.";
+            toast.error(message);
           }
         },
         modal: {
@@ -175,8 +174,9 @@ export default function BillingPage() {
 
       const razorpayInstance = new window.Razorpay(options);
       razorpayInstance.open();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to initiate subscription.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to initiate subscription.";
+      toast.error(message);
     }
   };
 
@@ -215,7 +215,7 @@ export default function BillingPage() {
     );
   }
 
-  const { entitlements, subscription, payments, canManage, plans } = billing;
+  const { entitlements, subscription, payments, canManage } = billing;
   const isPremium = entitlements.plan === "PREMIUM";
   const { usage, limits } = entitlements;
 
@@ -563,12 +563,17 @@ export default function BillingPage() {
                 ) : (
                   <TooltipProvider>
                     <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div>
-                          <Button disabled className="w-full">
-                            Upgrade to Premium
-                          </Button>
-                        </div>
+                      <TooltipTrigger
+                        render={
+                          <span
+                            className="inline-flex w-full cursor-not-allowed"
+                            tabIndex={0}
+                          />
+                        }
+                      >
+                        <Button disabled className="w-full">
+                          Upgrade to Premium
+                        </Button>
                       </TooltipTrigger>
                       <TooltipContent>
                         Only workspace owners can subscribe or change billing plans.
